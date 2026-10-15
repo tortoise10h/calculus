@@ -2,8 +2,7 @@
 
 A fast, lightweight desktop calculator inspired by [Numi](https://numi.app/), built in 100% pure Go using [MyGo Native UI](https://github.com/egoist/mygo).
 
-<img width="682" height="548" alt="image" src="https://github.com/user-attachments/assets/5f6c3ef3-0c7d-4217-a5ad-f9c04f3a6549" />
-
+<img width="682" height="548" alt="image" src="https://github.com/user-attachments/assets/f3f5284a-0244-4575-bb89-74999a0fd72d" />
 
 ## Core Features (MVP)
 
