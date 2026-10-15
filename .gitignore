@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Go & MyGo build outputs
+/dist/
+/build/
+/.mygo/
+mygo_windows_*.syso
+/go-calc
+*.exe
+*.test
+*.out
