@@ -20,7 +20,7 @@ func main() {
 
 	mygo.App.WhenReady(func() {
 		mygo.NewWindow(mygo.WindowOptions{
-			Title:     "Go-Calc",
+			Title:     "Go Calc",
 			Width:     720,
 			Height:    520,
 			MinWidth:  480,

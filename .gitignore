@@ -10,3 +10,6 @@ mygo_windows_*.syso
 *.exe
 *.test
 *.out
+
+# Local build output from `make build`
+/bin/

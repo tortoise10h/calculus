@@ -10,6 +10,20 @@
 - `internal/workspace`: Tab models, workspace state, and atomic file persistence.
 - `internal/app`: MyGo `ui` views, layout, syntax highlighting (`ui.TextRange`), and line-aligned result rendering (`ui.TextLines`).
 
+## UI Style Guide (Mandatory)
+- The app's look is **paper-blueprint**, ported to MyGo Native UI. The authoritative spec is `docs/style-guide.md` — **read it before touching any UI code**.
+- All UI-facing tokens (colors, fonts, spacing, radius, shadows, statuses) come from `docs/style-guide.md`, not from ad-hoc values or MyGo's default theme.
+- When styling new UI or changing existing UI:
+  - Use the palette constants from `internal/app/theme.go` (single source of truth; verified with `go build ./...`). Never hard-code hex values in views.
+  - Every "blue" surface must be `accent.Alpha(n)` per the tint ladder — never a new solid blue.
+  - Only two surfaces: warm paper `#f7f6f2` (window) and white `#ffffff` (editor sheet / tab chrome).
+  - Everything the user touches (editor, results, tabs, buttons, tooltips, toasts) uses the registered mono font **Lilex**; results get `FontFeatures("tnum")`.
+  - Interactions hover with a tint wash, never elevation/shadows; radius scale is 6/8/12 per the guide.
+  - Don't bold body/editor text; weight 500 max for labels, 600 only for eyebrow/section labels.
+  - Keep errors quiet while typing: unresolved vars mid-typing are muted, not red.
+- If you change UI code and the result deviates from `docs/style-guide.md`, fix the deviation (or, if a deliberate change, update the guide in the same change).
+- Extension rule: to create/update component recipes for parts not yet in the guide, extend `docs/style-guide.md` first, then implement.
+
 ## Best Practices
 - **Strict Separation**: Keep `internal/eval` and `internal/workspace` decoupled from `mygo/ui` so they remain fast and unit-testable with `go test ./...`.
 - **Live Typing UX**: Never show jarring errors on incomplete expressions while the user is mid-typing (e.g. `x = 10 + `).
