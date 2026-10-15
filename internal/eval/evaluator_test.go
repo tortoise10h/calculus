@@ -38,6 +38,9 @@ func TestEvaluateLineValues(t *testing.T) {
 		{"trailing comment", "20 + 5 # lunch", "25"},
 		{"trailing double-slash comment", "20 + 5 // lunch", "25"},
 		{"CRLF line ending", "20 + 5\r", "25"},
+		{"simple assignment", "x = 10 + 5", "15"},
+		{"assignment with decimal", "tax = 0.05 * 100", "5"},
+		{"trailing comment on assignment", "drink_cost = 10 + 5 # drinks", "15"},
 	}
 
 	for _, tt := range tests {
@@ -75,7 +78,11 @@ func TestEvaluateLineNoResult(t *testing.T) {
 		{"two adjacent numbers", "2 apples", ErrUnexpectedToken},
 		{"stray close paren", "10 + 5)", ErrUnexpectedToken},
 		{"empty parens", "()", ErrUnexpectedToken},
-		{"assignment not yet supported", "x = 10 + 5", ErrUnexpectedToken},
+		{"assignment invalid lhs number", "10 = 5", ErrUnexpectedToken},
+		{"chained assignment not supported", "a = b = 5", ErrUnexpectedToken},
+		{"assignment missing rhs", "a = ", ErrIncomplete},
+		{"assignment undefined rhs", "a = unknown", ErrUndefinedVar},
+		{"undefined identifier", "unknown_var", ErrUndefinedVar},
 		{"unknown symbol", "$20 + 5", ErrUnexpectedToken},
 		{"divide by zero", "10 / 0", ErrDivideByZero},
 		{"modulo by zero", "10 % 0", ErrDivideByZero},
@@ -214,4 +221,140 @@ func TestSumResultsIgnoresNoResultLines(t *testing.T) {
 	if sum != 4 || n != 2 {
 		t.Fatalf("SumResults = (%v, %d), want (4, 2)", sum, n)
 	}
+}
+
+func TestVariableAssignmentAndScoping(t *testing.T) {
+	t.Run("basic assignment and cross-line references", func(t *testing.T) {
+		doc := "drink_cost = 10 + 5 + 20\nmeal_cost = 25\ntotal_cost = drink_cost + meal_cost"
+		results := EvaluateDocument(doc)
+
+		if len(results) != 3 {
+			t.Fatalf("len(results) = %d, want 3", len(results))
+		}
+		wants := []struct {
+			val         string
+			assignedVar string
+		}{
+			{"35", "drink_cost"},
+			{"25", "meal_cost"},
+			{"60", "total_cost"},
+		}
+		for i, w := range wants {
+			if !results[i].HasResult {
+				t.Errorf("line %d: HasResult = false, Err = %v", i, results[i].Err)
+			}
+			if results[i].FormattedValue != w.val {
+				t.Errorf("line %d: FormattedValue = %q, want %q", i, results[i].FormattedValue, w.val)
+			}
+			if results[i].AssignedVar != w.assignedVar {
+				t.Errorf("line %d: AssignedVar = %q, want %q", i, results[i].AssignedVar, w.assignedVar)
+			}
+		}
+		if sum, n := SumResults(results); sum != 120 || n != 3 {
+			t.Errorf("SumResults = (%v, %d), want (120, 3)", sum, n)
+		}
+	})
+
+	t.Run("reassignment in top-down order", func(t *testing.T) {
+		doc := strings.Join([]string{
+			"tax = 5",
+			"price = 100 + tax",
+			"tax = 10",
+			"new_price = 100 + tax",
+		}, "\n")
+		results := EvaluateDocument(doc)
+
+		wants := []string{"5", "105", "10", "110"}
+		for i, want := range wants {
+			if !results[i].HasResult || results[i].FormattedValue != want {
+				t.Errorf("line %d = %q, want %q (err: %v)", i, results[i].FormattedValue, want, results[i].Err)
+			}
+		}
+	})
+
+	t.Run("self-referencing update", func(t *testing.T) {
+		doc := strings.Join([]string{
+			"count = 1",
+			"count = count + 1",
+			"count = count * 3",
+		}, "\n")
+		results := EvaluateDocument(doc)
+
+		wants := []string{"1", "2", "6"}
+		for i, want := range wants {
+			if !results[i].HasResult || results[i].FormattedValue != want {
+				t.Errorf("line %d = %q, want %q (err: %v)", i, results[i].FormattedValue, want, results[i].Err)
+			}
+		}
+	})
+
+	t.Run("failed reassignment preserves previous binding", func(t *testing.T) {
+		doc := strings.Join([]string{
+			"x = 10",
+			"x = 20 +",
+			"x + 5",
+		}, "\n")
+		results := EvaluateDocument(doc)
+
+		if !results[0].HasResult || results[0].FormattedValue != "10" {
+			t.Errorf("line 0 failed: %+v", results[0])
+		}
+		if results[1].HasResult || !errors.Is(results[1].Err, ErrIncomplete) {
+			t.Errorf("line 1 should be incomplete: %+v", results[1])
+		}
+		if !results[2].HasResult || results[2].FormattedValue != "15" {
+			t.Errorf("line 2 failed: %+v", results[2])
+		}
+	})
+
+	t.Run("forward reference fails without breaking later lines", func(t *testing.T) {
+		doc := strings.Join([]string{
+			"early = later + 1",
+			"later = 10",
+			"after = later + 1",
+		}, "\n")
+		results := EvaluateDocument(doc)
+
+		if results[0].HasResult || !errors.Is(results[0].Err, ErrUndefinedVar) {
+			t.Errorf("line 0 should have ErrUndefinedVar: %+v", results[0])
+		}
+		if len(results[0].UnresolvedVars) != 1 || results[0].UnresolvedVars[0] != "later" {
+			t.Errorf("line 0 UnresolvedVars = %v, want ['later']", results[0].UnresolvedVars)
+		}
+		if !results[1].HasResult || results[1].FormattedValue != "10" {
+			t.Errorf("line 1 failed: %+v", results[1])
+		}
+		if !results[2].HasResult || results[2].FormattedValue != "11" {
+			t.Errorf("line 2 failed: %+v", results[2])
+		}
+	})
+
+	t.Run("identifier naming forms and single identifier expression", func(t *testing.T) {
+		doc := strings.Join([]string{
+			"snake_case_var = 10",
+			"camelCaseVar = 20",
+			"_leading_underscore = 30",
+			"item2 = 40",
+			"snake_case_var + camelCaseVar + _leading_underscore + item2",
+			"item2", // single identifier expression inspection
+		}, "\n")
+		results := EvaluateDocument(doc)
+
+		wants := []string{"10", "20", "30", "40", "100", "40"}
+		for i, want := range wants {
+			if !results[i].HasResult || results[i].FormattedValue != want {
+				t.Errorf("line %d = %q, want %q (err: %v)", i, results[i].FormattedValue, want, results[i].Err)
+			}
+		}
+	})
+
+	t.Run("assignment with trailing comment", func(t *testing.T) {
+		res := EvaluateLine(0, "drink_cost = 10 + 5 # drinks")
+		if !res.HasResult || res.FormattedValue != "15" {
+			t.Fatalf("expected result 15, got %q (err: %v)", res.FormattedValue, res.Err)
+		}
+		if res.AssignedVar != "drink_cost" {
+			t.Fatalf("AssignedVar = %q, want 'drink_cost'", res.AssignedVar)
+		}
+	})
 }

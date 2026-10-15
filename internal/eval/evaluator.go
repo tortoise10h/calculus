@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"math"
 	"strconv"
 	"strings"
@@ -18,31 +19,39 @@ const (
 
 // LineResult is the evaluated outcome of one line of the document.
 type LineResult struct {
-	LineIndex      int     // Zero-based index of the line in the document.
-	RawText        string  // The line as typed, without the trailing '\n'.
-	Value          float64 // Numeric value, valid only when HasResult is true.
-	FormattedValue string  // Display string for Value, empty when HasResult is false.
-	HasResult      bool    // True when the line is a complete, valid expression.
-	Err            error   // Why the line has no result. Nil for blank and comment-only lines.
-	Tokens         []Token // All tokens of the line, including comments, for highlighting.
+	LineIndex      int      // Zero-based index of the line in the document.
+	RawText        string   // The line as typed, without the trailing '\n'.
+	Value          float64  // Numeric value, valid only when HasResult is true.
+	FormattedValue string   // Display string for Value, empty when HasResult is false.
+	HasResult      bool     // True when the line is a complete, valid expression.
+	AssignedVar    string   // Variable name when the line starts with `<ident> =`, else "".
+	UnresolvedVars []string // Identifier names that failed scope lookup on this line.
+	Err            error    // Why the line has no result. Nil for blank and comment-only lines.
+	Tokens         []Token  // All tokens of the line, including comments, for highlighting.
 }
 
-// EvaluateDocument evaluates every line of text independently and returns one
-// LineResult per line. Lines are split on '\n', so the slice length is always
-// strings.Count(text, "\n") + 1 (an empty text yields a single empty line).
+// EvaluateDocument evaluates every line of text sequentially with a shared
+// variable scope and returns one LineResult per line. Lines are split on '\n',
+// so the slice length is always strings.Count(text, "\n") + 1 (an empty text yields a single empty line).
 func EvaluateDocument(text string) []LineResult {
 	lines := strings.Split(text, "\n")
 	results := make([]LineResult, len(lines))
+	scope := make(map[string]float64)
 	for i, line := range lines {
-		results[i] = EvaluateLine(i, line)
+		results[i] = EvaluateLineWithScope(i, line, scope)
 	}
 	return results
 }
 
-// EvaluateLine lexes, parses and evaluates one line. Blank lines, comment-only
-// lines and lines that do not produce a value return HasResult == false; no
-// line ever causes a panic.
+// EvaluateLine lexes, parses and evaluates one line without an ambient scope.
+// Blank lines, comment-only lines and lines that do not produce a value return
+// HasResult == false; no line ever causes a panic.
 func EvaluateLine(index int, line string) LineResult {
+	return EvaluateLineWithScope(index, line, nil)
+}
+
+// EvaluateLineWithScope lexes, parses and evaluates one line with the given variable scope.
+func EvaluateLineWithScope(index int, line string, scope map[string]float64) LineResult {
 	res := LineResult{
 		LineIndex: index,
 		RawText:   line,
@@ -60,13 +69,64 @@ func EvaluateLine(index int, line string) LineResult {
 		return res // Blank or comment-only line: no result, no error.
 	}
 
+	if len(code) >= 2 && code[0].Kind == TokenIdent && code[1].Kind == TokenAssign {
+		res.AssignedVar = code[0].Text
+	}
+
+	addUnresolved := func(name string) {
+		for _, u := range res.UnresolvedVars {
+			if u == name {
+				return
+			}
+		}
+		res.UnresolvedVars = append(res.UnresolvedVars, name)
+	}
+
 	node, err := Parse(code)
 	if err != nil {
 		res.Err = err
+		if errors.Is(err, ErrIncomplete) {
+			start := 0
+			if res.AssignedVar != "" {
+				start = 2
+			}
+			for _, tok := range code[start:] {
+				if tok.Kind == TokenIdent {
+					if scope == nil {
+						addUnresolved(tok.Text)
+					} else if _, ok := scope[tok.Text]; !ok {
+						addUnresolved(tok.Text)
+					}
+				}
+			}
+		}
 		return res
 	}
 
-	value, err := Eval(node)
+	var collectUnresolved func(n Node)
+	collectUnresolved = func(n Node) {
+		if n == nil {
+			return
+		}
+		switch node := n.(type) {
+		case *IdentNode:
+			if scope == nil {
+				addUnresolved(node.Name)
+			} else if _, ok := scope[node.Name]; !ok {
+				addUnresolved(node.Name)
+			}
+		case *AssignNode:
+			collectUnresolved(node.Expr)
+		case *UnaryNode:
+			collectUnresolved(node.X)
+		case *BinaryNode:
+			collectUnresolved(node.Left)
+			collectUnresolved(node.Right)
+		}
+	}
+	collectUnresolved(node)
+
+	value, err := EvalWithScope(node, scope)
 	if err != nil {
 		res.Err = err
 		return res
@@ -78,29 +138,56 @@ func EvaluateLine(index int, line string) LineResult {
 	return res
 }
 
-// Eval computes the value of an AST. It returns ErrDivideByZero for '/' or '%'
-// by zero, and ErrNonFinite if any intermediate or final value is NaN or ±Inf.
+// Eval computes the value of an AST with no variables in scope. It returns
+// ErrUndefinedVar if any identifier is encountered.
 func Eval(n Node) (float64, error) {
+	return EvalWithScope(n, nil)
+}
+
+// EvalWithScope computes the value of an AST using scope for variable lookup
+// and mutation. It returns ErrDivideByZero for '/' or '%' by zero, and
+// ErrNonFinite if any intermediate or final value is NaN or ±Inf.
+func EvalWithScope(n Node, scope map[string]float64) (float64, error) {
 	switch node := n.(type) {
 	case *NumberNode:
 		return checkFinite(node.Value)
 
+	case *IdentNode:
+		if scope == nil {
+			return 0, ErrUndefinedVar
+		}
+		val, ok := scope[node.Name]
+		if !ok {
+			return 0, ErrUndefinedVar
+		}
+		return val, nil
+
+	case *AssignNode:
+		val, err := EvalWithScope(node.Expr, scope)
+		if err != nil {
+			return 0, err
+		}
+		if scope != nil {
+			scope[node.Name] = val
+		}
+		return val, nil
+
 	case *UnaryNode:
-		x, err := Eval(node.X)
+		x, err := EvalWithScope(node.X, scope)
 		if err != nil {
 			return 0, err
 		}
 		if node.Op == TokenMinus {
-			return -x, nil
+			return checkFinite(-x)
 		}
-		return x, nil
+		return checkFinite(x)
 
 	case *BinaryNode:
-		left, err := Eval(node.Left)
+		left, err := EvalWithScope(node.Left, scope)
 		if err != nil {
 			return 0, err
 		}
-		right, err := Eval(node.Right)
+		right, err := EvalWithScope(node.Right, scope)
 		if err != nil {
 			return 0, err
 		}

@@ -16,6 +16,8 @@ var (
 	ErrDivideByZero = errors.New("division by zero")
 	// ErrNonFinite means the result overflowed to Inf or is NaN.
 	ErrNonFinite = errors.New("result is not a finite number")
+	// ErrUndefinedVar means an expression referenced a variable that has not been defined in scope.
+	ErrUndefinedVar = errors.New("undefined variable")
 )
 
 // Node is an AST node for a single-line expression.
@@ -26,6 +28,17 @@ type Node interface {
 // NumberNode is a numeric literal.
 type NumberNode struct {
 	Value float64
+}
+
+// IdentNode is a variable reference by name.
+type IdentNode struct {
+	Name string
+}
+
+// AssignNode assigns the value of Expr to the variable Name.
+type AssignNode struct {
+	Name string
+	Expr Node
 }
 
 // UnaryNode is a prefix '+' or '-' applied to X.
@@ -41,23 +54,42 @@ type BinaryNode struct {
 }
 
 func (*NumberNode) node() {}
+func (*IdentNode) node()  {}
+func (*AssignNode) node() {}
 func (*UnaryNode) node()  {}
 func (*BinaryNode) node() {}
 
 // Grammar (lowest to highest precedence, all binary operators left-associative):
 //
+//	stmt    := IDENT '=' expr | expr
 //	expr    := term   { ('+' | '-') term }
 //	term    := unary  { ('*' | '/' | '%') unary }
 //	unary   := ('+' | '-') unary | primary
-//	primary := NUMBER | '(' expr ')'
+//	primary := NUMBER | IDENT | '(' expr ')'
 //
 // Parse consumes the whole token slice; any leftover token is an error.
 // Comment tokens must be removed by the caller.
 func Parse(tokens []Token) (Node, error) {
-	p := &parser{tokens: tokens}
 	if len(tokens) == 0 {
 		return nil, ErrIncomplete
 	}
+
+	if len(tokens) >= 2 && tokens[0].Kind == TokenIdent && tokens[1].Kind == TokenAssign {
+		p := &parser{tokens: tokens, pos: 2}
+		if p.pos >= len(p.tokens) {
+			return nil, ErrIncomplete
+		}
+		rhs, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		if p.pos < len(p.tokens) {
+			return nil, ErrUnexpectedToken
+		}
+		return &AssignNode{Name: tokens[0].Text, Expr: rhs}, nil
+	}
+
+	p := &parser{tokens: tokens}
 	node, err := p.parseExpr()
 	if err != nil {
 		return nil, err
@@ -143,6 +175,9 @@ func (p *parser) parsePrimary() (Node, error) {
 	case TokenNumber:
 		p.pos++
 		return &NumberNode{Value: tok.Value}, nil
+	case TokenIdent:
+		p.pos++
+		return &IdentNode{Name: tok.Text}, nil
 	case TokenLParen:
 		p.pos++
 		inner, err := p.parseExpr()

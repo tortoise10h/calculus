@@ -44,11 +44,14 @@ func TestSetContentEvaluatesDocument(t *testing.T) {
 	a.SetContent("drink = 1\n2 * 3")
 	tt.Frame()
 
+	if !tt.HasText("1") {
+		t.Fatalf("expected result '1', got texts: %v", tt.Texts())
+	}
 	if !tt.HasText("6") {
 		t.Fatalf("expected result '6', got texts: %v", tt.Texts())
 	}
-	if !tt.HasText("Sum: 6") {
-		t.Fatalf("expected 'Sum: 6', got texts: %v", tt.Texts())
+	if !tt.HasText("Sum: 7") {
+		t.Fatalf("expected 'Sum: 7', got texts: %v", tt.Texts())
 	}
 }
 
@@ -179,4 +182,102 @@ func TestComputeTextRanges(t *testing.T) {
 		t.Errorf("range 3 (comment): %+v", ranges[3])
 	}
 }
+
+func TestEditorVariableAssignmentFlow(t *testing.T) {
+	a := New()
+	tt := ui.NewTester(a.View, 720, 520)
+	tt.Frame()
+
+	typeLines(tt, "drink_cost = 10 + 5 + 20", "meal_cost = 40", "total_cost = drink_cost + meal_cost")
+	tt.Frame()
+
+	for _, want := range []string{"35", "40", "75"} {
+		if !tt.HasText(want) {
+			t.Fatalf("expected result %q to be rendered, got texts: %v", want, tt.Texts())
+		}
+	}
+	if !tt.HasText("Sum: 150") {
+		t.Fatalf("expected status bar 'Sum: 150', got texts: %v", tt.Texts())
+	}
+
+	if err := tt.Click("75"); err != nil {
+		t.Fatalf("click result '75': %v", err)
+	}
+	tt.Frame()
+
+	if got := tt.Clipboard(); got != "75" {
+		t.Fatalf("clipboard = %q, want '75'", got)
+	}
+	if !tt.HasText("Copied 75") {
+		t.Fatalf("expected status 'Copied 75', got texts: %v", tt.Texts())
+	}
+}
+
+func TestComputeTextRangesForVariables(t *testing.T) {
+	doc := "drink_cost = 10 + 5\ntotal = drink_cost + missing_var\n# note"
+	a := New()
+	a.SetContent(doc)
+	ranges := computeTextRanges(a.results)
+
+	// Line 0: drink_cost (0..10), = (11..12), 10 (13..15), + (16..17), 5 (18..19)
+	// Line 1: total (20..25), = (26..27), drink_cost (28..38), + (39..40), missing_var (41..52)
+	// Line 2: # note (53..59)
+	if len(ranges) != 11 {
+		t.Fatalf("expected 11 ranges, got %d: %+v", len(ranges), ranges)
+	}
+
+	// Line 0 LHS
+	if r := ranges[0]; r.Color != Accent || r.Weight != 400 || r.Start != 0 || r.End != 10 {
+		t.Errorf("line 0 drink_cost (LHS): %+v", r)
+	}
+	// Line 0 =
+	if r := ranges[1]; r.Color != FullContrast || r.Weight != 400 || r.Start != 11 || r.End != 12 {
+		t.Errorf("line 0 =: %+v", r)
+	}
+	// Line 1 LHS
+	if r := ranges[5]; r.Color != Accent || r.Weight != 400 || r.Start != 20 || r.End != 25 {
+		t.Errorf("line 1 total (LHS): %+v", r)
+	}
+	// Line 1 =
+	if r := ranges[6]; r.Color != FullContrast || r.Weight != 400 || r.Start != 26 || r.End != 27 {
+		t.Errorf("line 1 =: %+v", r)
+	}
+	// Line 1 resolved RHS var drink_cost
+	if r := ranges[7]; r.Color != FG || r.Weight != 400 || r.Start != 28 || r.End != 38 {
+		t.Errorf("line 1 drink_cost (resolved RHS): %+v", r)
+	}
+	// Line 1 unresolved RHS var missing_var
+	if r := ranges[9]; r.Color != Muted || r.Weight != 400 || r.Start != 41 || r.End != 52 {
+		t.Errorf("line 1 missing_var (unresolved RHS): %+v", r)
+	}
+	// Line 2 comment
+	if r := ranges[10]; r.Color != SyntaxComment || r.Weight != 400 || r.Start != 53 || r.End != 59 {
+		t.Errorf("line 2 comment: %+v", r)
+	}
+
+	// Single bare header word should stay FG even if unresolved
+	aHeader := New()
+	aHeader.SetContent("Groceries\nx = 10")
+	rangesHeader := computeTextRanges(aHeader.results)
+	// Groceries is a single bare word on line 0 (len(codeTokens) == 1), should be FG
+	if r := rangesHeader[0]; r.Color != FG || r.Start != 0 || r.End != 9 {
+		t.Errorf("single bare header 'Groceries' should be FG: %+v", r)
+	}
+
+	// Mid-typing incomplete assignment ("x = " and "y = x + missing + ") highlights LHS as Accent and unresolved RHS as Muted
+	aIncomplete := New()
+	aIncomplete.SetContent("x = 10\ny = x + missing + ")
+	rangesInc := aIncomplete.ranges
+	// Line 1: y (7..8), = (9..10), x (11..12), + (13..14), missing (15..22), + (23..24)
+	if r := rangesInc[3]; r.Color != Accent || r.Start != 7 || r.End != 8 {
+		t.Errorf("incomplete line LHS 'y' should be Accent: %+v", r)
+	}
+	if r := rangesInc[5]; r.Color != FG || r.Start != 11 || r.End != 12 {
+		t.Errorf("incomplete line resolved 'x' should be FG: %+v", r)
+	}
+	if r := rangesInc[7]; r.Color != Muted || r.Start != 15 || r.End != 22 {
+		t.Errorf("incomplete line unresolved 'missing' should be Muted: %+v", r)
+	}
+}
+
 

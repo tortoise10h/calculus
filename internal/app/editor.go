@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -22,8 +24,6 @@ const (
 // editor renders the free-style text area. Each keystroke that changes the text
 // re-evaluates the document through OnChange.
 func (a *App) editor(c *ui.Context) {
-	ranges := computeTextRanges(a.results)
-
 	ui.TextAreaBase(c, &a.content).
 		Grow(1).FillHeight().
 		Background(Surface).
@@ -36,7 +36,7 @@ func (a *App) editor(c *ui.Context) {
 		AutoFocus().
 		TrackLines(&a.lines).
 		TrackScroll(&a.scroll).
-		TextRanges(ranges...).
+		TextRanges(a.ranges...).
 		OnChange(a.evaluate)
 }
 
@@ -63,6 +63,7 @@ func (a *App) resultColumn(c *ui.Context, t *ui.Theme) {
 			copyResult := func() {
 				c.WriteClipboard(res.FormattedValue)
 				a.lastCopied = res.FormattedValue
+				a.copiedAt = time.Now()
 				c.Toast("Copied " + res.FormattedValue)
 			}
 
