@@ -46,7 +46,9 @@ func (a *App) View(c *ui.Context) {
 	t := ApplyTheme(c)
 
 	ui.Column(c).Fill().Background(Surface).Children(func() {
-		// Editor on the left, aligned results column on the right.
+		a.headerBar(c)
+
+		// Seamless full-width canvas: editor on the left, aligned results on the right.
 		ui.Row(c).Grow(1).FillWidth().Background(Surface).Children(func() {
 			a.editor(c)
 			a.resultColumn(c, t)
@@ -55,6 +57,74 @@ func (a *App) View(c *ui.Context) {
 		ui.Divider(c).Background(BorderLight)
 		a.statusBar(c, t)
 	})
+
+	ui.ToastViewportBase(c, func(viewport ui.Element, toasts []ui.Toast) {
+		viewport.Padding(16, 16, 44, 16).AlignItems(ui.Center).Gap(6)
+		for _, item := range toasts {
+			toast := ui.ToastBase(c, item)
+			toast.Root.Row().
+				AlignItems(ui.Center).
+				Padding(6, 14).
+				Radius(RadiusPill).
+				Background(FullContrast).
+				Shadow(0, 4, 12, 0, ui.RGBA(0, 0, 0, 0.12)).
+				Children(func() {
+					ui.Text(c, item.Title).
+						FontSize(SizeLabel).
+						Font(FontMono).
+						FontWeight(500).
+						TextColor(BG)
+				})
+		}
+	})
+}
+
+// headerBar provides a seamless draggable top region that clears the native
+// window controls without boxing in the workspace.
+func (a *App) headerBar(c *ui.Context) {
+	bar := c.TitleBar()
+	height := bar.Height
+	if height < 38 {
+		height = 38
+	}
+	rightPad := bar.Right + 20
+	if rightPad < 20 {
+		rightPad = 20
+	}
+
+	ui.Row(c).FillWidth().Height(height).
+		Padding(0, rightPad, 0, 28).
+		AlignItems(ui.Center).
+		Background(Surface).
+		DragWindow().
+		Children(func() {
+			ui.Box(c).Grow(1)
+
+			if a.content != "" {
+				clearBtn := ui.Row(c).
+					AlignItems(ui.Center).
+					Padding(3, 8).
+					Radius(RadiusMD).
+					Cursor(ui.CursorPointer).
+					Tooltip("Clear all").
+					OnClick(func() {
+						a.SetContent("")
+					})
+				if clearBtn.Hovered() {
+					clearBtn.Background(InkWash)
+				}
+				clearBtn.Children(func() {
+					col := Muted
+					if clearBtn.Hovered() {
+						col = FullContrast
+					}
+					ui.Text(c, "Clear").
+						FontSize(SizeLabel).
+						Font(FontMono).
+						TextColor(col)
+				})
+			}
+		})
 }
 
 // statusBar shows the last copy action on the left and the sum of all results on the right.
@@ -70,7 +140,7 @@ func (a *App) statusBar(c *ui.Context, t *ui.Theme) {
 	}
 	total, count := eval.SumResults(a.results)
 
-	ui.Row(c).FillWidth().Height(statusBarHeight).Padding(0, 24).
+	ui.Row(c).FillWidth().Height(statusBarHeight).Padding(0, 28).
 		AlignItems(ui.Center).
 		Background(Surface).
 		Children(func() {
@@ -82,11 +152,32 @@ func (a *App) statusBar(c *ui.Context, t *ui.Theme) {
 			ui.Box(c).Grow(1)
 
 			if count > 0 {
-				ui.Text(c, "Sum: "+eval.FormatNumber(total)).
-					FontSize(SizeLabel).
-					Font(FontMono).
-					FontFeatures("tnum").
-					TextColor(Muted)
+				formattedTotal := eval.FormatNumber(total)
+				copyTotal := func() {
+					c.WriteClipboard(formattedTotal)
+					a.lastCopied = formattedTotal
+					a.copiedAt = time.Now()
+				}
+
+				sumRow := ui.Row(c).
+					AlignItems(ui.Center).
+					Padding(2, 6).
+					Radius(RadiusMD).
+					Cursor(ui.CursorPointer).
+					Tooltip("Click to copy sum").
+					OnClick(copyTotal)
+				if sumRow.Hovered() {
+					sumRow.Background(HoverWash)
+				}
+				sumRow.Children(func() {
+					ui.Text(c, "Sum: "+formattedTotal).
+						FontSize(SizeLabel).
+						Font(FontMono).
+						FontFeatures("tnum").
+						FontWeight(500).
+						TextColor(FullContrast).
+						OnClick(copyTotal)
+				})
 			}
 		})
 }

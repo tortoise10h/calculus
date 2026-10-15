@@ -12,14 +12,14 @@
 
 ## Design intent (one paragraph)
 
-Calculus is a sheet of warm paper with a column of machine results beside it.
-Two surface levels only: warm paper `#f7f6f2` (window background) and white
-`#ffffff` (the editor sheet, tab chrome, popovers). Every "blue" surface is an
-**alpha tint of the cobalt accent `#094eCE`**, never a new solid color. Anything
-the user *types or reads as a number* is **mono** ("machine speech"); the thin
-serif (IBM Plex Serif, weight 400, never bold) carries only the app's identity
-moments — the window title / brand text if we ever draw one. Interaction is
-quiet: hairline ink borders, hover = 5% tint wash, never elevation.
+Calculus is a seamless, edge-to-edge sheet of paper (`#ffffff`) with an aligned
+column of machine results beside it and an integrated frameless header bar.
+Every "blue" surface is an **alpha tint of the cobalt accent `#094eCE`**, never a
+new solid blue. Anything the user *types or reads as a number* is **mono**
+("machine speech"), with crisp dark ink (`#1d2433`) for typed numbers so cobalt
+`Accent` (`#094eCE`) is earned for variable definitions and calculated results.
+Interaction is quiet and spacious: no inner boxes, no vertical walls dividing the
+sheet, hover = tint wash, never elevation.
 
 ---
 
@@ -184,15 +184,20 @@ separator wants a softer read.
 
 ## Component recipes
 
-### Window / root (`app.View`)
+### Window / root (`app.View`) & Integrated Header Bar
 
-```go
-ui.Column(c).Fill().Background(Paper.Surface).Children(func() { ... })
-```
-
-The editor sheet and aligned results gutter (140 DIPs) sit on white `Paper.Surface`,
-grounded by a thin horizontal light grey divider (`BorderLight` `#e3e5e9`) above
-the bottom status bar.
+- Window uses `mygo.TitleBarHiddenInset` with `BackgroundColor: "#ffffff"` so the
+  paper sheet (`Surface`) extends seamlessly behind the macOS traffic lights
+  without a contrasting OS titlebar or cramped inner borders.
+- Root column fills the window with `Surface` (`#ffffff`):
+  1. **Seamless Draggable Header Bar** (`height = max(c.TitleBar().Height, 38)`):
+     sits on `Surface` (`#ffffff`) with no bottom border so the editor flows
+     directly beneath the window controls, offering a subtle `"Clear"` action on
+     the right when the sheet has content.
+  2. **Full-Width Editor + Results Row**: `Surface` (`#ffffff`), no outer margin
+     or vertical divider wall so the space feels open and continuous.
+  3. **Status / Footer Bar**: separated by a single `1px` `BorderLight` hairline
+     at the bottom of `Surface`.
 
 ### TabBar (Lite `ui.TabsBase`)
 
@@ -216,33 +221,27 @@ the bottom status bar.
 ```go
 ui.TextAreaBase(c, &a.content).
 	Grow(1).FillHeight().
-	Background(Paper.Surface).
-	Padding(16, 24, 16, 24).
+	Background(Surface).
+	Padding(8, 28, 16, 28).
 	FontSize(14).LineHeight(1.6).
 	Font("Lilex").FontFeatures("tnum").
-	TextColor(Paper.FG).
+	TextColor(FG).
 	SelectionColor(Accent.Alpha(0.14)).
-	Placeholder("Type an expression…").PlaceholderColor(Paper.Muted)
+	Placeholder("Type an expression…").PlaceholderColor(Muted)
 ```
 
-- Left-aligned "ink" text on white; the caret is invisible here but the
-  **placeholder** is Lilex with `Muted` color, never italic-error-red.
-- One hairline: none. The editor relies on being white-on-paper; no border on
-  the text area itself inside the window, its left edge is the window's.
+- Left-aligned "ink" text on white with generous `28 DIP` horizontal margins; no
+  border or line-number gutter so the canvas feels open and effortless.
 
 ### Result column (`resultColumn`)
 
-- `Background(Paper.Surface)` (same white as editor — results belong to the
-  same sheet; the 1px divider is the only separation).
+- Width `148` DIPs, `Background(Surface)` (same seamless white as the editor).
 - Result text: Lilex 14, `FontFeatures("tnum")`, **weight 500**,
-  color = `Accent` (`#094eCE`). Bold is currently used — switch to 500 to
-  match paper-blueprint's "500 = UI label" convention.
-- Hover on a result row: row wash `Accent.Alpha(0.09)` behind the value with
-  radius 6 around it (`ui.Row(...).Padding(2,6)`), cursor `CursorPointer`.
-- Suggestion "click to copy" → if shown, render as a mono tooltip style:
-  `FullContrast` fill `#191d26`, text `#f7f6f2`, mono 12 — the paper-blueprint
-  "dark tooltip" rule (MyGo toasts/tooltips already invert via `Inverse`,
-  set `t.Inverse, t.InverseText = FullContrast, BG`).
+  color = `Accent` (`#094eCE`).
+- Hover on a result row: row wash `PressWash` (`Accent.Alpha(0.09)`) behind the
+  value with radius 6 around it (`ui.Row(...).Padding(2, 8)`), cursor `CursorPointer`.
+- Clicking a result copies it to the clipboard and updates the status bar inline
+  (without spawning an oversized toast banner over the editor).
 
 ### Set the theme once
 
@@ -273,11 +272,13 @@ the version differs.)
 
 ### Status bar
 
-Height 28, on `Paper.Surface` with a thin horizontal light grey divider (`BorderLight` `#e3e5e9`) above it.
-Horizontal padding 24 DIPs aligning with editor and result margins.
-Text: Lilex 12, `Muted`. The total on the right keeps `Muted`, but the copy
-confirmation (`Copied 35`) flips to `Accent` for 2s — a machine speech queue,
-not a banner.
+Height 30, on `Surface` (`#ffffff`) with a thin horizontal light grey divider
+(`BorderLight` `#e3e5e9`) above it and horizontal padding `28 DIPs` aligning with
+the editor and result margins.
+- Left: Lilex 12, `Muted` (`"Ready"`), flipping to `Accent` (`"Copied <val>"`)
+  for 5s on copy.
+- Right: interactive `"Sum: <total>"` in `FullContrast` weight 500 with a subtle
+  `HoverWash` pill on hover that copies the sum when clicked.
 
 ### Buttons (future toolbar / menu bar)
 
@@ -293,23 +294,24 @@ not a banner.
 
 ### Toast (`#094eCE` free)
 
-Currently used for copy acks. Style: keep MyGo's inverted-toast default, but
-with `Inverse = FullContrast` as above; radius 12 (a floating paper pill),
-shadow `0 4px 12px rgba(0,0,0,0.08)`, mono text 12.5.
+Styled via `ui.ToastViewportBase` as a compact floating pill (`RadiusPill` 12,
+`FullContrast` `#191d26` fill, `BG` `#f7f6f2` text, Lilex 12, `Padding(6, 12)`).
+Result copy confirmations use the inline footer status pill rather than spawning
+a toast banner.
 
 ---
 
 ## Syntax highlighting palette (Phase 2 needs)
 
-Derived from paper-blueprint's verbatim syntax tint set
-(`.tok-*` in source: `#0b53d0` strings/numbers, `#8a4a00` functions,
-`#7c3aed` purple, accent for anything that is "brand content"):
+Derived from paper-blueprint's syntax & ink tokens so that cobalt `Accent` is
+earned for variable definitions (LHS) and calculated results rather than washing
+every number in the same blue:
 
 | Token class | Color | Rationale (source) |
 |---|---|---|
-| numbers | `#0b53d0` | paper-blueprint's string/number token |
+| numbers | `#1d2433` (`SyntaxNumber`) | crisp deep charcoal-slate ink so numbers read clearly against cobalt LHS vars & results |
 | identifiers (bare variables in expressions) | `#4b5362` (`FG`) | neutral ink |
-| assignment target (`name =`) LHS | `#094eCE` (`Accent`) | it's an editable "title"? no — accent is what marks active/primary; the LHS is the named part of the line |
+| assignment target (`name =`) LHS | `#094eCE` (`Accent`) | cobalt blueprint accent marks named variable definitions |
 | operators `+ - * / % ( )` | `#6e7686` (`Muted`) | quiet machine punctuation |
 | `=` | `#191d26` (`FullContrast`) | strongest single glyph; keep the paper "underline-weight" idea |
 | comments (`#`, `//`) | `#6e7686` (`Muted`) | same family as muted code comments in the source |

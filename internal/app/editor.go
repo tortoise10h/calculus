@@ -12,13 +12,13 @@ import (
 const (
 	editorFontSize    = SizeEditor // 14 DIPs
 	editorLineHeight  = 1.6
-	editorPadTop      = 16
+	editorPadTop      = 8
 	editorPadBottom   = 16
-	editorPadX        = 24
+	editorPadX        = 28
 	editorRowHeight   = editorFontSize * editorLineHeight // Height of one line, in DIPs.
-	resultColumnWidth = 140
-	resultPadRight    = 24
-	statusBarHeight   = 28
+	resultColumnWidth = 148
+	resultPadRight    = 28
+	statusBarHeight   = 30
 )
 
 // editor renders the free-style text area. Each keystroke that changes the text
@@ -64,15 +64,15 @@ func (a *App) resultColumn(c *ui.Context, t *ui.Theme) {
 				c.WriteClipboard(res.FormattedValue)
 				a.lastCopied = res.FormattedValue
 				a.copiedAt = time.Now()
-				c.Toast("Copied " + res.FormattedValue)
 			}
 
-			// Result row container with hover wash and 6px rounding.
+			// Result row container on the same seamless surface; shows a soft
+			// cobalt tint pill on hover.
 			// Offset by -2 DIPs so the text with 2 DIP padding aligns exactly
 			// with the editor line baseline.
 			row := ui.Row(c).
-				Absolute().Top(y - 2).Right(resultPadRight - 6).
-				Padding(2, 6).
+				Absolute().Top(y - 2).Right(resultPadRight - 8).
+				Padding(2, 8).
 				Radius(RadiusMD).
 				Cursor(ui.CursorPointer).
 				Tooltip("Click to copy").

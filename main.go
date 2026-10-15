@@ -20,13 +20,15 @@ func main() {
 
 	mygo.App.WhenReady(func() {
 		mygo.NewWindow(mygo.WindowOptions{
-			Title:     "Calculus",
-			Width:     720,
-			Height:    520,
-			MinWidth:  480,
-			MinHeight: 360,
-			StateKey:  "main",
-			Content:   ui.View(calcApp.View),
+			Title:           "Calculus",
+			Width:           720,
+			Height:          520,
+			MinWidth:        480,
+			MinHeight:       360,
+			TitleBarStyle:   mygo.TitleBarHiddenInset,
+			BackgroundColor: "#ffffff",
+			StateKey:        "main",
+			Content:         ui.View(calcApp.View),
 		})
 	})
 

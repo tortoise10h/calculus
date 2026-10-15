@@ -13,11 +13,11 @@ import (
 //
 // Colors are plain ui.Color values so views can share them directly.
 
-// Paper surfaces: exactly two levels.
+// Paper surfaces: two levels.
 var (
 	// BG is the warm paper window background.
 	BG = ui.Hex("#f7f6f2")
-	// Surface is the raised paper sheet (editor, tab bar, result column).
+	// Surface is the seamless paper sheet (header, editor, result column, status bar).
 	Surface = ui.Hex("#ffffff")
 )
 
@@ -35,10 +35,10 @@ var (
 var (
 	Accent = ui.Hex("#094eCE")
 	// HoverWash, PressWash, CardShadow, SelectionWash, FocusRing, BlueBorder
-	// match the alphas listed in docs/style-guide.md (0.05/0.09/0.07/0.14/0.15/0.3).
+	// follow the alpha tint ladder in docs/style-guide.md.
 	HoverWash     = Accent.Alpha(0.05)
-	PressWash     = Accent.Alpha(0.09)
 	CardShadow    = Accent.Alpha(0.07)
+	PressWash     = Accent.Alpha(0.09)
 	SelectionWash = Accent.Alpha(0.14)
 	FocusRing     = Accent.Alpha(0.15)
 	BlueBorder    = Accent.Alpha(0.3)
@@ -63,7 +63,7 @@ var (
 
 // Syntax highlighting palette (see docs/style-guide.md, Phase 2/3 section).
 var (
-	SyntaxNumber   = ui.Hex("#0b53d0")
+	SyntaxNumber   = ui.Hex("#1d2433")
 	SyntaxOperator = Muted
 	SyntaxComment  = Muted
 )
