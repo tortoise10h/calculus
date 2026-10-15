@@ -107,6 +107,7 @@ func init() {
 // ApplyTheme configures the MyGo context with paper-blueprint theme tokens.
 func ApplyTheme(c *ui.Context) *ui.Theme {
 	t := *c.Theme()
+	t.Dark = false
 	t.Radius = RadiusLG
 	t.FontSize = SizeEditor
 	t.Font = FontMono

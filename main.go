@@ -11,6 +11,8 @@ import (
 func main() {
 	calcApp := app.New()
 
+	mygo.Theme.SetSource(mygo.ThemeLight)
+
 	mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu},
 		{Role: mygo.RoleEditMenu},
