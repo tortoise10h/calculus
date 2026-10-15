@@ -6,7 +6,7 @@
 /build/
 /.mygo/
 mygo_windows_*.syso
-/go-calc
+/calculus
 *.exe
 *.test
 *.out

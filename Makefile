@@ -1,11 +1,11 @@
-# Go-Calc developer commands.
+# Calculus developer commands.
 #
-#   make build   compile the binary into bin/go-calc
+#   make build   compile the binary into bin/calculus
 #   make dev     run the app with live reload (mygo dev)
 #   make test    run all unit and UI tests
 #   make help    list the targets
 
-APP      := go-calc
+APP      := calculus
 BIN_DIR  := bin
 MYGO     := go tool mygo
 
@@ -15,7 +15,7 @@ MYGO     := go tool mygo
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Compile the app into bin/go-calc
+build: ## Compile the app into bin/calculus
 	@mkdir -p $(BIN_DIR)
 	go build -o $(BIN_DIR)/$(APP) .
 

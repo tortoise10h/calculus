@@ -1,16 +1,16 @@
 # Phase 2 Plan: Free-Style Multi-Line Calculation Engine & Aligned Result View
 
 ## Goal
-Build **Feature 1** of Go-Calc: a pure-Go multi-line free-style math evaluation engine (`internal/eval`) paired with a split/aligned native editor view (`internal/app`) where each line is evaluated independently and its result is rendered immediately on the right side, vertically aligned with the expression that produced it.
+Build **Feature 1** of Calculus: a pure-Go multi-line free-style math evaluation engine (`internal/eval`) paired with a split/aligned native editor view (`internal/app`) where each line is evaluated independently and its result is rendered immediately on the right side, vertically aligned with the expression that produced it.
 
 ---
 
 ## Context & Existing Codebase Reference
 
-- **Module**: `github.com/tortoise10h/go-calc` (`go 1.27.2`, `github.com/egoist/mygo v0.5.1`).
+- **Module**: `github.com/tortoise10h/calculus` (`go 1.27.2`, `github.com/egoist/mygo v0.5.1`).
 - **Existing Files**:
   - `main.go`: Boots the native `mygo` window (`720x520`), initializes `app.New()`, and mounts `appInstance.View`.
-  - `internal/app/app.go`: Currently renders a placeholder shell (`"Go-Calc"` / `"Free-style calculator ready for Phase 2"` / `"Ready"`).
+  - `internal/app/app.go`: Currently renders a placeholder shell (`"Calculus"` / `"Free-style calculator ready for Phase 2"` / `"Ready"`).
   - `internal/app/app_test.go`: Headless UI test using `ui.NewTester(a.View, 720, 520)`.
 - **Architectural Boundaries (`AGENTS.md`)**:
   - `internal/eval` **must have zero UI dependencies** (pure Go standard library only) so it remains fast and unit-testable.
@@ -200,7 +200,7 @@ Write table-driven unit tests covering:
            - `.Tooltip("Click to copy")`
            - `.OnClick(func() { c.WriteClipboard(res.FormattedValue); a.lastCopied = res.FormattedValue; c.Toast("Copied " + res.FormattedValue) })`
 3. **Status Bar (`internal/app/app.go`)**:
-   - Keep `"Go-Calc"` header or subtle top bar if needed, and in the bottom status bar (`Height(28)`):
+   - Keep `"Calculus"` header or subtle top bar if needed, and in the bottom status bar (`Height(28)`):
      - Left: `"Ready"` (or `"Copied <val>"` when `a.lastCopied != ""`)
      - Right: Summary metric when at least one line has a result, e.g., `"Sum: <formatted_sum>"` across all evaluated result lines.
 

@@ -1,4 +1,4 @@
-# Go-Calc Style Guide — paper-blueprint on MyGo Native UI
+# Calculus Style Guide — paper-blueprint on MyGo Native UI
 
 > This guide ports the **paper-blueprint** style
 > (`/Users/sunday/Dev/Personal/Projects/ui-skills/styles/paper-blueprint/style-guide.md`)
@@ -12,7 +12,7 @@
 
 ## Design intent (one paragraph)
 
-Go-Calc is a sheet of warm paper with a column of machine results beside it.
+Calculus is a sheet of warm paper with a column of machine results beside it.
 Two surface levels only: warm paper `#f7f6f2` (window background) and white
 `#ffffff` (the editor sheet, tab chrome, popovers). Every "blue" surface is an
 **alpha tint of the cobalt accent `#094eCE`**, never a new solid color. Anything
@@ -27,7 +27,7 @@ quiet: hairline ink borders, hover = 5% tint wash, never elevation.
 
 ### Light theme (paper-blueprint is light-only — this is the canonical palette)
 
-| Go-Calc token | Value | paper-blueprint source | Usage in the app |
+| Calculus token | Value | paper-blueprint source | Usage in the app |
 |---|---|---|---|
 | `BG` | `#f7f6f2` | `--bg` | Window background (behind the editor sheet) |
 | `Paper` | `#ffffff` | `--pre-bg` | Editor background, tab bar, result column, popovers |
@@ -43,7 +43,7 @@ quiet: hairline ink borders, hover = 5% tint wash, never elevation.
 
 Every blue surface is `ui.Hex("#094eCE").Alpha(x)`:
 
-| Alpha | Use in Go-Calc |
+| Alpha | Use in Calculus |
 |---|---|
 | `0.05` | Button / tab hover wash |
 | `0.07` | Paper card shadow color |

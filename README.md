@@ -1,4 +1,4 @@
-# Go-Calc
+# Calculus
 
 A fast, lightweight desktop calculator inspired by [Numi](https://numi.app/), built in 100% pure Go using [MyGo Native UI](https://github.com/egoist/mygo).
 
@@ -11,7 +11,7 @@ A fast, lightweight desktop calculator inspired by [Numi](https://numi.app/), bu
 ## Project Structure
 
 ```text
-go-calc/
+calculus/
 ├── internal/
 │   ├── app/         # MyGo Native UI views, tab bar, editor & syntax highlighting
 │   ├── eval/        # Lexer, parser, AST, and line-by-line expression evaluator

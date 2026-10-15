@@ -5,7 +5,7 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
-	"github.com/tortoise10h/go-calc/internal/app"
+	"github.com/tortoise10h/calculus/internal/app"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 
 	mygo.App.WhenReady(func() {
 		mygo.NewWindow(mygo.WindowOptions{
-			Title:     "Go Calc",
+			Title:     "Calculus",
 			Width:     720,
 			Height:    520,
 			MinWidth:  480,

@@ -1,4 +1,4 @@
-module github.com/tortoise10h/go-calc
+module github.com/tortoise10h/calculus
 
 go 1.27.2
 

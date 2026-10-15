@@ -1,15 +1,15 @@
-# Go-Calc MVP Master Plan
+# Calculus MVP Master Plan
 
 ## Goal
-Build **Go-Calc**, a fast, lightweight, Numi-inspired desktop calculator app written in 100% pure Go using **MyGo Native UI (`github.com/egoist/mygo/ui`)**. The MVP delivers real-time multi-line free-style math evaluation, line-by-line variable assignments with cross-line references, and multi-tab workspaces with automatic local persistence.
+Build **Calculus**, a fast, lightweight, Numi-inspired desktop calculator app written in 100% pure Go using **MyGo Native UI (`github.com/egoist/mygo/ui`)**. The MVP delivers real-time multi-line free-style math evaluation, line-by-line variable assignments with cross-line references, and multi-tab workspaces with automatic local persistence.
 
 ---
 
 ## Context & Architectural Decisions
 
-- **Current Workspace State**: `go-calc` is a brand-new empty directory ready to be initialized.
+- **Current Workspace State**: `calculus` is a brand-new empty directory ready to be initialized.
 - **Framework & UI Choice**: **MyGo Native UI (`mygo/ui`)** (GPU-rendered via Metal on macOS, Direct3D 11 on Windows, OpenGL on Linux; zero cgo, zero WebView overhead, instant startup).
-- **Key `mygo/ui` Primitives Available for Go-Calc**:
+- **Key `mygo/ui` Primitives Available for Calculus**:
   - `ui.TextArea` / `ui.TextAreaBase` with:
     - `TrackLines(&ui.TextLines)` and `TrackScroll(&ui.ScrollState)` — purpose-built in MyGo for painting content **beside each line** at its exact vertical offset (`top + lines.Top(i)`), which maps directly to Numi's right-hand results column!
     - `TextRanges(ui.TextRange{...})` — allows coloring tokens (numbers, variables, operators, comments) directly inside the text area each frame.
@@ -22,7 +22,7 @@ Build **Go-Calc**, a fast, lightweight, Numi-inspired desktop calculator app wri
 ## Target Project Structure
 
 ```text
-go-calc/
+calculus/
 ├── go.mod
 ├── go.sum
 ├── main.go                     # App entrypoint, window setup, menus/shortcuts, lifecycle hooks

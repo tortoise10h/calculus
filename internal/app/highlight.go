@@ -2,7 +2,7 @@ package app
 
 import (
 	"github.com/egoist/mygo/ui"
-	"github.com/tortoise10h/go-calc/internal/eval"
+	"github.com/tortoise10h/calculus/internal/eval"
 )
 
 // computeTextRanges converts the lexed tokens from all line results into a flat

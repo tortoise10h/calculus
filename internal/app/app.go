@@ -2,10 +2,10 @@ package app
 
 import (
 	"github.com/egoist/mygo/ui"
-	"github.com/tortoise10h/go-calc/internal/eval"
+	"github.com/tortoise10h/calculus/internal/eval"
 )
 
-// App holds the root UI state for Go-Calc.
+// App holds the root UI state for Calculus.
 type App struct {
 	content    string            // The editor text, bound to the TextArea.
 	results    []eval.LineResult // One result per editor line, recomputed on change.
@@ -14,7 +14,7 @@ type App struct {
 	lastCopied string            // Last value copied from the results column.
 }
 
-// New creates a new Go-Calc application state instance.
+// New creates a new Calculus application state instance.
 func New() *App {
 	return &App{}
 }
@@ -33,7 +33,7 @@ func (a *App) evaluate() {
 	a.results = eval.EvaluateDocument(a.content)
 }
 
-// View renders the root Native UI frame for Go-Calc.
+// View renders the root Native UI frame for Calculus.
 func (a *App) View(c *ui.Context) {
 	t := ApplyTheme(c)
 

@@ -1,6 +1,6 @@
 {
-  "name": "Go-Calc",
-  "identifier": "com.tortoise10h.gocalc",
+  "name": "Calculus",
+  "identifier": "com.tortoise10h.calculus",
   "version": "0.1.0",
   "out": "build"
 }
