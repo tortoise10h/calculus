@@ -13,3 +13,4 @@ mygo_windows_*.syso
 
 # Local build output from `make build`
 /bin/
+plans/
