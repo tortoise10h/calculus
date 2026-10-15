@@ -2,6 +2,9 @@
 
 A fast, lightweight desktop calculator inspired by [Numi](https://numi.app/), built in 100% pure Go using [MyGo Native UI](https://github.com/egoist/mygo).
 
+<img width="682" height="548" alt="image" src="https://github.com/user-attachments/assets/5f6c3ef3-0c7d-4217-a5ad-f9c04f3a6549" />
+
+
 ## Core Features (MVP)
 
 - **Free-Style Multi-Line Calculation**: Type math expressions across multiple lines (`20 + 5 - 12`) and see results immediately aligned on the right side.
