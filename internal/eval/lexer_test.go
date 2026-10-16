@@ -102,3 +102,77 @@ func kinds(toks []Token) []TokenKind {
 	}
 	return out
 }
+
+func TestLexLineNumberShorthand(t *testing.T) {
+	tests := []struct {
+		input string
+		want  []Token
+	}{
+		{"100k", []Token{{Kind: TokenNumber, Text: "100k", Value: 100000, Start: 0, End: 4}}},
+		{"10m", []Token{{Kind: TokenNumber, Text: "10m", Value: 10000000, Start: 0, End: 3}}},
+		{"10tr", []Token{{Kind: TokenNumber, Text: "10tr", Value: 10000000, Start: 0, End: 4}}},
+		{"1b", []Token{{Kind: TokenNumber, Text: "1b", Value: 1000000000, Start: 0, End: 2}}},
+		{"1t", []Token{{Kind: TokenNumber, Text: "1t", Value: 1000000000, Start: 0, End: 2}}},
+		{"5TR", []Token{{Kind: TokenNumber, Text: "5TR", Value: 5000000, Start: 0, End: 3}}},
+		{"2M", []Token{{Kind: TokenNumber, Text: "2M", Value: 2000000, Start: 0, End: 2}}},
+		{"-2k", []Token{
+			{Kind: TokenMinus, Text: "-", Start: 0, End: 1},
+			{Kind: TokenNumber, Text: "2k", Value: 2000, Start: 1, End: 3},
+		}},
+		{"1.5k", []Token{{Kind: TokenNumber, Text: "1.5k", Value: 1500, Start: 0, End: 4}}},
+		{".5m", []Token{{Kind: TokenNumber, Text: ".5m", Value: 500000, Start: 0, End: 3}}},
+		{"1.k", []Token{{Kind: TokenNumber, Text: "1.k", Value: 1000, Start: 0, End: 3}}},
+		{"5train", []Token{
+			{Kind: TokenNumber, Text: "5", Value: 5, Start: 0, End: 1},
+			{Kind: TokenIdent, Text: "train", Start: 1, End: 6},
+		}},
+		{"5tr2", []Token{
+			{Kind: TokenNumber, Text: "5", Value: 5, Start: 0, End: 1},
+			{Kind: TokenIdent, Text: "tr2", Start: 1, End: 4},
+		}},
+		{"5 k", []Token{
+			{Kind: TokenNumber, Text: "5", Value: 5, Start: 0, End: 1},
+			{Kind: TokenIdent, Text: "k", Start: 2, End: 3},
+		}},
+		{"m", []Token{{Kind: TokenIdent, Text: "m", Start: 0, End: 1}}},
+		{"k = 5", []Token{
+			{Kind: TokenIdent, Text: "k", Start: 0, End: 1},
+			{Kind: TokenAssign, Text: "=", Start: 2, End: 3},
+			{Kind: TokenNumber, Text: "5", Value: 5, Start: 4, End: 5},
+		}},
+		{"100k + 5", []Token{
+			{Kind: TokenNumber, Text: "100k", Value: 100000, Start: 0, End: 4},
+			{Kind: TokenPlus, Text: "+", Start: 5, End: 6},
+			{Kind: TokenNumber, Text: "5", Value: 5, Start: 7, End: 8},
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := LexLine(tt.input)
+			if len(got) != len(tt.want) {
+				t.Fatalf("LexLine(%q) = %+v, want %+v", tt.input, got, tt.want)
+			}
+			for i := range got {
+				w := tt.want[i]
+				g := got[i]
+				if g.Kind != w.Kind || g.Text != w.Text || g.Start != w.Start || g.End != w.End {
+					t.Fatalf("LexLine(%q)[%d] = %+v, want %+v", tt.input, i, g, w)
+				}
+				if w.Kind == TokenNumber && g.Value != w.Value {
+					t.Fatalf("LexLine(%q)[%d].Value = %v, want %v", tt.input, i, g.Value, w.Value)
+				}
+			}
+		})
+	}
+
+	t.Run("3.14k float rounding", func(t *testing.T) {
+		got := LexLine("3.14k")
+		if len(got) != 1 || got[0].Kind != TokenNumber || got[0].Text != "3.14k" || got[0].Start != 0 || got[0].End != 5 {
+			t.Fatalf("LexLine(\"3.14k\") = %+v", got)
+		}
+		if diff := got[0].Value - 3140; diff < -1e-6 || diff > 1e-6 {
+			t.Fatalf("Value = %v, want ~3140", got[0].Value)
+		}
+	})
+}

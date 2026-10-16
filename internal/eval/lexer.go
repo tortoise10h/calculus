@@ -1,6 +1,20 @@
 package eval
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
+
+// numberSuffixes maps an attached, case-insensitive literal suffix to its
+// magnitude multiplier. See plans/04-number-shorthand-suffixes.md.
+// Matching is whole-run: "5tr" folds, but "5train" and "5tr2" do not.
+var numberSuffixes = map[string]float64{
+	"k":  1e3, // thousand
+	"m":  1e6, // million
+	"tr": 1e6, // triệu (Vietnamese: million)
+	"b":  1e9, // billion
+	"t":  1e9, // tỷ (Vietnamese: billion)
+}
 
 // LexLine splits a single line into tokens. It never fails: any rune it does
 // not recognise becomes a TokenUnknown, so arbitrary user text is safe.
@@ -31,12 +45,22 @@ func LexLine(line string) []Token {
 		case isDigit(r) || (r == '.' && i+1 < len(runes) && isDigit(runes[i+1])):
 			// This one to be sure if we face decimal number like 1.245678 we then can get the whole string from 1->8 => "1.2345678"
 			end := scanNumber(runes, i)
-			text := string(runes[i:end])
 
 			// ParseFloat returns ±Inf with ErrRange for absurdly large literals;
 			// the evaluator rejects non-finite values, so the error is ignored here.
-			value, _ := strconv.ParseFloat(text, 64)
-			toks = append(toks, Token{Kind: TokenNumber, Text: text, Value: value, Start: i, End: end})
+			value, _ := strconv.ParseFloat(string(runes[i:end]), 64)
+
+			// Number shorthand: an attached suffix like 100k / 10m / 10tr / 1b / 1t
+			// folds into this same token (case-insensitive, whole-run match).
+			literEnd := scanNumberSuffix(runes, end)
+			if literEnd > end {
+				if mult, ok := suffixMultiplier(string(runes[end:literEnd])); ok {
+					value *= mult
+					end = literEnd
+				}
+			}
+
+			toks = append(toks, Token{Kind: TokenNumber, Text: string(runes[i:end]), Value: value, Start: i, End: end})
 			i = end
 
 		// For checking both variable `total` `sub_total` or also a built-in functions like `sqrt`
@@ -61,9 +85,12 @@ func LexLine(line string) []Token {
 // at runes[start]. Accepted forms: "123", "123.", "123.45", ".45".
 func scanNumber(runes []rune, start int) int {
 	i := start
+	// Collect until finding no number character
 	for i < len(runes) && isDigit(runes[i]) {
 		i++
 	}
+
+	// If after the last number character is "." -> decimal -> collect the rest of decimal part as well
 	if i < len(runes) && runes[i] == '.' {
 		i++
 		for i < len(runes) && isDigit(runes[i]) {
@@ -71,6 +98,29 @@ func scanNumber(runes []rune, start int) int {
 		}
 	}
 	return i
+}
+
+// scanNumberSuffix returns the exclusive end of the maximal ident-like run
+// starting at runes[start] (immediately after a numeric literal), or start
+// when the next rune cannot begin a suffix (digit stop, operator, EOF, ...).
+// The caller must verify the run exactly equals a known suffix, but this
+// function's "maximal run" property is what rejects e.g. "5train" or "5tr2".
+func scanNumberSuffix(runes []rune, start int) int {
+	i := start
+	if i < len(runes) && isIdentStart(runes[i]) {
+		i++
+	}
+	for i < len(runes) && isIdentPart(runes[i]) {
+		i++
+	}
+	return i
+}
+
+// suffixMultiplier resolves a lowercased ident-style run to its magnitude
+// multiplier, using the maximal-run rule: only entire-run matches fold.
+func suffixMultiplier(run string) (float64, bool) {
+	mult, ok := numberSuffixes[strings.ToLower(run)]
+	return mult, ok
 }
 
 func singleRuneKind(r rune) TokenKind {

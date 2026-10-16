@@ -358,3 +358,72 @@ func TestVariableAssignmentAndScoping(t *testing.T) {
 		}
 	})
 }
+
+func TestEvaluateLineNumberShorthand(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want string // expected FormattedValue; HasResult is implied true
+	}{
+		{"thousand", "100k", "100000"},
+		{"million", "10m", "10000000"},
+		{"vietnamese million", "10tr", "10000000"},
+		{"billion", "1b", "1000000000"},
+		{"vietnamese billion", "1t", "1000000000"},
+		{"large thousand", "1500k", "1500000"},
+		{"decimal thousand", "1.5k", "1500"},
+		{"decimal million noise absorbed", "1.23m", "1230000"},
+		{"unary minus", "-2k", "-2000"},
+		{"precedence with multiply", "2k * 2", "4000"},
+		{"addition", "100k + 5", "100005"},
+		{"paren division", "(1t)/2", "500000000"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := EvaluateLine(0, tt.line)
+			if !res.HasResult {
+				t.Fatalf("EvaluateLine(%q): HasResult = false, Err = %v", tt.line, res.Err)
+			}
+			if res.Err != nil {
+				t.Fatalf("EvaluateLine(%q): unexpected Err %v", tt.line, res.Err)
+			}
+			if res.FormattedValue != tt.want {
+				t.Fatalf("EvaluateLine(%q) = %q, want %q", tt.line, res.FormattedValue, tt.want)
+			}
+		})
+	}
+
+	t.Run("shorthand inside assignments and cross-line scope", func(t *testing.T) {
+		results := EvaluateDocument("scope = 2t\nscope / 4")
+		if !results[0].HasResult || results[0].FormattedValue != "2000000000" {
+			t.Fatalf("line 0 = %+v, want 2000000000", results[0])
+		}
+		if !results[1].HasResult || results[1].FormattedValue != "500000000" {
+			t.Fatalf("line 1 = %+v, want 500000000", results[1])
+		}
+	})
+
+	t.Run("rejected suffix shapes keep prior behavior", func(t *testing.T) {
+		res := EvaluateLine(0, "train")
+		if res.HasResult || !errors.Is(res.Err, ErrUndefinedVar) {
+			t.Fatalf("train = %+v, want ErrUndefinedVar with no result", res)
+		}
+		if len(res.UnresolvedVars) != 1 || res.UnresolvedVars[0] != "train" {
+			t.Fatalf("UnresolvedVars = %v, want [train]", res.UnresolvedVars)
+		}
+		for _, line := range []string{"5train", "5 k"} {
+			res := EvaluateLine(0, line)
+			if res.HasResult || !errors.Is(res.Err, ErrUnexpectedToken) {
+				t.Fatalf("EvaluateLine(%q) = %+v, want ErrUnexpectedToken", line, res)
+			}
+		}
+	})
+
+	t.Run("overflow shorthand is non-finite", func(t *testing.T) {
+		res := EvaluateLine(0, "1"+strings.Repeat("0", 400)+"t")
+		if res.HasResult || !errors.Is(res.Err, ErrNonFinite) {
+			t.Fatalf("overflow = %+v, want ErrNonFinite with no result", res)
+		}
+	})
+}

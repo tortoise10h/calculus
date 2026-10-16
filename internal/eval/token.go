@@ -5,7 +5,7 @@ type TokenKind int
 
 const (
 	TokenEOF     TokenKind = iota // Reserved for parser end-of-input; never emitted by LexLine.
-	TokenNumber                   // 20, 3.14, .5
+	TokenNumber                   // 20, 3.14, .5, and shorthand: 100k==100000, 10m/10tr==10000000, 1b/1t==1000000000
 	TokenIdent                    // drink_cost, x1 (variables arrive in Phase 3)
 	TokenPlus                     // +
 	TokenMinus                    // -
@@ -50,7 +50,7 @@ func (k TokenKind) String() string {
 type Token struct {
 	Kind  TokenKind
 	Text  string
-	Value float64 // Set when Kind == TokenNumber.
+	Value float64 // Set when Kind == TokenNumber (already multiplied by any shorthand suffix).
 	Start int
 	End   int
 }
