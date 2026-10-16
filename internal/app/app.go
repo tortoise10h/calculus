@@ -154,7 +154,7 @@ func (a *App) statusBar(c *ui.Context, t *ui.Theme) {
 			if count > 0 {
 				formattedTotal := eval.FormatNumber(total)
 				copyTotal := func() {
-					c.WriteClipboard(formattedTotal)
+					c.WriteClipboard(eval.UngroupNumber(formattedTotal))
 					a.lastCopied = formattedTotal
 					a.copiedAt = time.Now()
 				}

@@ -228,11 +228,13 @@ func checkFinite(v float64) (float64, error) {
 
 // FormatNumber renders a finite value for display. It rounds to at most
 // maxDecimals decimal places and at most maxSignificant significant digits,
-// strips trailing zeros and the decimal point, and normalises -0 to 0.
-//
-// Examples: 13 -> "13", 0.1+0.2 -> "0.3", 10/4 -> "2.5", 10/3 -> "3.3333333333",
-// 1234567056.6333 -> "1234567056.63".
+// strips trailing zeros and the decimal point, normalises -0 to 0, and
+// groups the integer part with "," thousands separators ("100000" ->
+// "100,000") so large results stay readable in the result column.
 // Callers must pass a finite value; EvaluateLine guarantees this.
+//
+// The separators are display-only: the lexer has no thousands-separator
+// syntax, so use UngroupNumber before putting a value on the clipboard.
 func FormatNumber(v float64) string {
 	decimals := maxDecimals
 	if v != 0 {
@@ -251,7 +253,43 @@ func FormatNumber(v float64) string {
 	if s == "-0" {
 		return "0"
 	}
-	return s
+	return groupThousands(s)
+}
+
+// groupThousands inserts "," separators into the integer part of an
+// already-formatted number ("1000000.5" -> "1,000,000.5"). A leading "-"
+// and any fraction are preserved; values under 1000 pass through untouched.
+func groupThousands(s string) string {
+	neg := strings.HasPrefix(s, "-")
+	digits := strings.TrimPrefix(s, "-")
+	intPart := digits
+	frac := ""
+	if i := strings.IndexByte(digits, '.'); i >= 0 {
+		intPart, frac = digits[:i], digits[i:]
+	}
+	if len(intPart) <= 3 {
+		return s
+	}
+	out := make([]byte, 0, len(intPart)+len(intPart)/3+len(frac)+1)
+	if neg {
+		out = append(out, '-')
+	}
+	first := len(intPart) % 3
+	if first == 0 {
+		first = 3
+	}
+	out = append(out, intPart[:first]...)
+	for i := first; i < len(intPart); i += 3 {
+		out = append(out, ',')
+		out = append(out, intPart[i:i+3]...)
+	}
+	return string(append(out, frac...))
+}
+
+// UngroupNumber strips the "," separators FormatNumber inserts, so a
+// displayed value pastes back into the editor as a parseable number.
+func UngroupNumber(s string) string {
+	return strings.ReplaceAll(s, ",", "")
 }
 
 // SumResults adds the values of all lines that have a result. It returns the

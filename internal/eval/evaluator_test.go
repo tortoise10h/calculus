@@ -33,7 +33,7 @@ func TestEvaluateLineValues(t *testing.T) {
 		{"negative result", "3 - 10", "-7"},
 		{"negative zero normalised", "-0", "0"},
 		{"negative tiny value rounds to zero", "-0.0000000001 * 0.001", "0"},
-		{"large integer keeps digits", "1000000000000 * 10", "10000000000000"},
+		{"large integer keeps digits", "1000000000000 * 10", "10,000,000,000,000"},
 		{"whitespace and tabs", "  20\t+ 5  ", "25"},
 		{"trailing comment", "20 + 5 # lunch", "25"},
 		{"trailing double-slash comment", "20 + 5 // lunch", "25"},
@@ -197,16 +197,39 @@ func TestFormatNumber(t *testing.T) {
 		{0.1 + 0.2, "0.3"},
 		{10.0 / 3.0, "3.3333333333"},
 		{2.0 / 3.0, "0.6666666667"},
-		{1e15, "1000000000000000"},
+		{1e15, "1,000,000,000,000,000"},
+		{1000, "1,000"},
+		{999, "999"},
+		{-1234.5, "-1,234.5"},
+		{1000000.5, "1,000,000.5"},
 		{-0.00000000001, "0"},
-		{1234567056.6333334446, "1234567056.63"},
-		{123456789012345, "123456789012345"},
+		{1234567056.6333334446, "1,234,567,056.63"},
+		{123456789012345, "123,456,789,012,345"},
 		{0.1234567890123, "0.123456789"},
 		{-42.5, "-42.5"},
 	}
 	for _, tt := range tests {
 		if got := FormatNumber(tt.in); got != tt.want {
 			t.Errorf("FormatNumber(%v) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestUngroupNumberRoundTrip(t *testing.T) {
+	// Displayed values carry "," separators, which the lexer does not accept,
+	// so clipboard copies must go through UngroupNumber to stay pasteable.
+	for _, v := range []float64{100000, -1234.5, 1000000.5, 1e15, 13} {
+		displayed := FormatNumber(v)
+		plain := UngroupNumber(displayed)
+		if strings.Contains(plain, ",") {
+			t.Fatalf("UngroupNumber(%q) = %q, still grouped", displayed, plain)
+		}
+		res := EvaluateLine(0, plain)
+		if !res.HasResult {
+			t.Fatalf("EvaluateLine(%q) (ungrouped from %q): HasResult = false, Err = %v", plain, displayed, res.Err)
+		}
+		if res.FormattedValue != displayed {
+			t.Fatalf("EvaluateLine(%q) = %q, want %q", plain, res.FormattedValue, displayed)
 		}
 	}
 }
@@ -365,18 +388,18 @@ func TestEvaluateLineNumberShorthand(t *testing.T) {
 		line string
 		want string // expected FormattedValue; HasResult is implied true
 	}{
-		{"thousand", "100k", "100000"},
-		{"million", "10m", "10000000"},
-		{"vietnamese million", "10tr", "10000000"},
-		{"billion", "1b", "1000000000"},
-		{"vietnamese billion", "1t", "1000000000"},
-		{"large thousand", "1500k", "1500000"},
-		{"decimal thousand", "1.5k", "1500"},
-		{"decimal million noise absorbed", "1.23m", "1230000"},
-		{"unary minus", "-2k", "-2000"},
-		{"precedence with multiply", "2k * 2", "4000"},
-		{"addition", "100k + 5", "100005"},
-		{"paren division", "(1t)/2", "500000000"},
+		{"thousand", "100k", "100,000"},
+		{"million", "10m", "10,000,000"},
+		{"vietnamese million", "10tr", "10,000,000"},
+		{"billion", "1b", "1,000,000,000"},
+		{"vietnamese billion", "1t", "1,000,000,000"},
+		{"large thousand", "1500k", "1,500,000"},
+		{"decimal thousand", "1.5k", "1,500"},
+		{"decimal million noise absorbed", "1.23m", "1,230,000"},
+		{"unary minus", "-2k", "-2,000"},
+		{"precedence with multiply", "2k * 2", "4,000"},
+		{"addition", "100k + 5", "100,005"},
+		{"paren division", "(1t)/2", "500,000,000"},
 	}
 
 	for _, tt := range tests {
@@ -396,10 +419,10 @@ func TestEvaluateLineNumberShorthand(t *testing.T) {
 
 	t.Run("shorthand inside assignments and cross-line scope", func(t *testing.T) {
 		results := EvaluateDocument("scope = 2t\nscope / 4")
-		if !results[0].HasResult || results[0].FormattedValue != "2000000000" {
+		if !results[0].HasResult || results[0].FormattedValue != "2,000,000,000" {
 			t.Fatalf("line 0 = %+v, want 2000000000", results[0])
 		}
-		if !results[1].HasResult || results[1].FormattedValue != "500000000" {
+		if !results[1].HasResult || results[1].FormattedValue != "500,000,000" {
 			t.Fatalf("line 1 = %+v, want 500000000", results[1])
 		}
 	})

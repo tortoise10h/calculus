@@ -238,6 +238,9 @@ ui.TextAreaBase(c, &a.content).
 - Width `148` DIPs, `Background(Surface)` (same seamless white as the editor).
 - Result text: Lilex 14, `FontFeatures("tnum")`, **weight 500**,
   color = `Accent` (`#094eCE`).
+- Result values render with `,` thousands separators via `eval.FormatNumber`
+  (`100005` → `"100,005"`); clipboard copies strip them via
+  `eval.UngroupNumber` so a copied value pastes back as parseable input.
 - Hover on a result row: row wash `PressWash` (`Accent.Alpha(0.09)`) behind the
   value with radius 6 around it (`ui.Row(...).Padding(2, 8)`), cursor `CursorPointer`.
 - Clicking a result copies it to the clipboard and updates the status bar inline

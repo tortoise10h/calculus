@@ -94,6 +94,35 @@ func TestClickResultCopiesToClipboard(t *testing.T) {
 	}
 }
 
+func TestLargeResultShowsThousandsSeparators(t *testing.T) {
+	a := New()
+	tt := ui.NewTester(a.View, 720, 520)
+	tt.Frame()
+
+	typeLines(tt, "100k + 5")
+	tt.Frame()
+
+	if !tt.HasText("100,005") {
+		t.Fatalf("expected grouped result '100,005', got texts: %v", tt.Texts())
+	}
+	if !tt.HasText("Sum: 100,005") {
+		t.Fatalf("expected grouped status 'Sum: 100,005', got texts: %v", tt.Texts())
+	}
+
+	if err := tt.Click("100,005"); err != nil {
+		t.Fatalf("click result: %v", err)
+	}
+	tt.Frame()
+
+	// Clipboard keeps plain digits so the value pastes back as valid input.
+	if got := tt.Clipboard(); got != "100005" {
+		t.Fatalf("clipboard = %q, want %q", got, "100005")
+	}
+	if !tt.HasText("Copied 100,005") {
+		t.Fatalf("expected status 'Copied 100,005', got texts: %v", tt.Texts())
+	}
+}
+
 func TestResultAlignsWithItsLine(t *testing.T) {
 	a := New()
 	tt := ui.NewTester(a.View, 720, 520)

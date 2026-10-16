@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/tortoise10h/calculus/internal/eval"
 )
 
 // Layout constants shared by the editor and the results column. Both must use
@@ -61,7 +62,10 @@ func (a *App) resultColumn(c *ui.Context, t *ui.Theme) {
 			}
 
 			copyResult := func() {
-				c.WriteClipboard(res.FormattedValue)
+				// Clipboard gets plain digits so the value pastes back into
+				// the editor as a parseable number; the status bar still shows
+				// the grouped form the user clicked.
+				c.WriteClipboard(eval.UngroupNumber(res.FormattedValue))
 				a.lastCopied = res.FormattedValue
 				a.copiedAt = time.Now()
 			}
