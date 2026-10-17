@@ -1,6 +1,8 @@
 package app
 
 import (
+	"image"
+	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -40,7 +42,8 @@ func tabStripDotsW(tabs int) float32 {
 
 // dotCenterX is the pointer position that lands on tab i's dot. Because the
 // leading spacer balances the trailing "+" button, the dots themselves are
-// centred on the window's midline.
+// centred on the window's midline. Only meaningful with two or more tabs: a
+// lone tab draws no dot.
 func dotCenterX(width float32, tabs, i int) float32 {
 	avail := width - 2*resultPadRight
 	left := float32(resultPadRight) + (avail-tabStripDotsW(tabs))/2
@@ -292,19 +295,52 @@ func TestCloseActiveDotClosesTheTab(t *testing.T) {
 	}
 }
 
-func TestALoneTabShowsNoCloseGlyph(t *testing.T) {
+// TestALoneTabShowsNoDot is the single-tab rule: with one tab there is nothing
+// to switch to and nothing to close, so the strip draws no dot at all and the
+// "+" button takes the window's midline.
+func TestALoneTabShowsNoDot(t *testing.T) {
 	const w, h = 720, 520
 
 	a := newBlankApp()
 	tt := ui.NewTester(a.View, w, h)
 	tt.Frame()
 
-	tt.Move(dotCenterX(w, 1, 0), float32(h)-tabStripHeight/2)
+	// Hovering the midline — where the dot used to be, and where the "+"
+	// now sits — must never offer a close glyph for the only tab.
+	tt.Move(float32(w)/2, float32(h)-tabStripHeight/2)
 	tt.Frame()
-
 	if _, ok := tt.Find(closeGlyph); ok {
 		t.Fatalf("the only tab offered a close %q", closeGlyph)
 	}
+
+	// Dots are Path circles painted under their hit boxes, not text, so the
+	// rendered pixels are the only witness to one existing.
+	if stripPaintsAccent(tt.Image(), h) {
+		t.Fatal("the bottom strip painted an Accent dot for a lone tab")
+	}
+
+	// The same scan must find the dots once a second tab exists, or the
+	// negative above proves nothing.
+	tt.Key(ui.Cmd, ui.KeyT)
+	tt.Frame()
+	if !stripPaintsAccent(tt.Image(), h) {
+		t.Fatal("no Accent dot painted with two tabs; the scan cannot see dots")
+	}
+}
+
+// stripPaintsAccent reports whether the bottom tab strip band paints anything
+// in the Accent colour — the active dot's fill and its ring.
+func stripPaintsAccent(img *image.RGBA, height int) bool {
+	b := img.Bounds()
+	top := b.Dy() - b.Dy()*int(tabStripHeight)/height
+	for y := top; y < b.Dy(); y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if p := img.RGBAAt(x, y); p.R == Accent.R && p.G == Accent.G && p.B == Accent.B {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestHoveringAnInactiveDotKeepsItADot(t *testing.T) {
@@ -639,6 +675,21 @@ func TestTabStripGroupIsCentred(t *testing.T) {
 		tt := ui.NewTester(a.View, w, h)
 		tt.Frame()
 
+		plus, ok := tt.Find("+")
+		if !ok {
+			t.Fatalf("%d tabs: no + button rendered", n)
+		}
+
+		if n == 1 {
+			// A lone tab draws no dots, so the "+" button itself takes the
+			// window's midline where the dots would otherwise sit.
+			centre := plus.X + plus.W/2
+			if math.Abs(float64(centre)-float64(w)/2) > 1 {
+				t.Errorf("1 tab: '+' centre = %v, want %v", centre, float32(w)/2)
+			}
+			continue
+		}
+
 		// The dots themselves are symmetric about the window's midline: a
 		// leading counterweight balances the trailing "+" button.
 		left := float32(resultPadRight) + (float32(w)-2*resultPadRight-tabStripDotsW(n))/2
@@ -650,13 +701,9 @@ func TestTabStripGroupIsCentred(t *testing.T) {
 		// And "+" rides right alongside the last dot. The gap is measured
 		// to the glyph's left edge, which sits inside the button box: the
 		// nearest it may be is one dot gap plus half a dot, and the furthest
-		// is the button's own centre. Either way the pitch is identical for 1
-		// tab as for 9, so "+" stays part of the group instead of drifting
+		// is the button's own centre. Either way the pitch is identical for 2
+		// tabs as for 9, so "+" stays part of the group instead of drifting
 		// toward the window edge as tabs accumulate.
-		plus, ok := tt.Find("+")
-		if !ok {
-			t.Fatalf("%d tabs: no + button rendered", n)
-		}
 		pitch := plus.X - dotCenterX(w, n, n-1)
 		nearest := float32(dotGap) + dotHitSize/2
 		furthest := nearest + tabStripAdd

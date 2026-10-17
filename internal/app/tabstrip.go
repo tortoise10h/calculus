@@ -7,8 +7,8 @@ import (
 	"github.com/tortoise10h/calculus/internal/workspace"
 )
 
-// The bottom bar is navigation only: one dot per tab, then the new-tab button
-// pinned to the right edge. Sizes live here beside the recipe in
+// The bottom bar is navigation only: one dot per tab (none for a lone tab),
+// then the new-tab button. Sizes live here beside the recipe in
 // docs/style-guide.md; colours come from theme.go.
 const (
 	tabStripHeight float32 = 30 // the row this strip replaces
@@ -28,6 +28,10 @@ var clearBroomIcon = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/
 
 // tabStrip renders a window of dots over the tab list, plus the new-tab
 // button, as a single group centred in the bottom bar.
+//
+// A lone tab gets no dot at all: it is always active, is never closable, and
+// already names itself in the header, so the strip reduces to the `+` button
+// alone on the window's midline.
 //
 // The window slides rather than truncating at a fixed count, so every tab stays
 // reachable with the mouse: `a.stripFirst` is the index of the leftmost dot
@@ -55,21 +59,27 @@ func (a *App) tabStrip(c *ui.Context) {
 		Background(Surface).
 		Children(func() {
 			ui.Row(c).Grow(1).Basis(0)
-			ui.Box(c).Width(tabStripAdd + dotGap)
 
-			if hiddenBefore > 0 {
-				a.stripOverflow(c, hiddenBefore, -maxDots,
-					strconv.Itoa(hiddenBefore)+" earlier tab"+(plural(hiddenBefore)))
-			}
+			// With a single tab the dots, their badges and the leading
+			// counterweight all go, so the "+" button itself lands on the
+			// window's midline.
+			if len(tabs) > 1 {
+				ui.Box(c).Width(tabStripAdd + dotGap)
 
-			for i := first; i < first+shown; i++ {
-				a.tabDot(c, tabs[i], i, i == active, closable)
-				ui.Box(c).Width(dotGap)
-			}
+				if hiddenBefore > 0 {
+					a.stripOverflow(c, hiddenBefore, -maxDots,
+						strconv.Itoa(hiddenBefore)+" earlier tab"+(plural(hiddenBefore)))
+				}
 
-			if hiddenAfter > 0 {
-				a.stripOverflow(c, hiddenAfter, maxDots,
-					strconv.Itoa(hiddenAfter)+" later tab"+(plural(hiddenAfter)))
+				for i := first; i < first+shown; i++ {
+					a.tabDot(c, tabs[i], i, i == active, closable)
+					ui.Box(c).Width(dotGap)
+				}
+
+				if hiddenAfter > 0 {
+					a.stripOverflow(c, hiddenAfter, maxDots,
+						strconv.Itoa(hiddenAfter)+" later tab"+(plural(hiddenAfter)))
+				}
 			}
 
 			a.newTabButton(c)

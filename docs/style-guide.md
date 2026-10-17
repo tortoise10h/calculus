@@ -204,9 +204,10 @@ separator wants a softer read.
 
 The header bar carries the **document** identity — centred active tab title and
 right-aligned `Sum` / copy feedback — and the bottom bar carries only
-**navigation** (one centred dot per tab, then `+`). Dot counts are unbounded, so
-sharing one row with `Sum` would invite crowding; sum and copy feedback belong
-with the document the active tab names in the header.
+**navigation** (one centred dot per tab — no dot at all for a lone tab — then
+`+`). Dot counts are unbounded, so sharing one row with `Sum` would invite
+crowding; sum and copy feedback belong with the document the active tab names in
+the header.
 
 ### Tab strip (bottom bar, dots)
 
@@ -243,6 +244,11 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
   (U+00D7, present in Lilex) in `Muted`, turning `Danger` on hover of the `×`
   itself. The ring is skipped while the `×` is shown so the glyph reads cleanly.
   The **last remaining tab is never closable**: no `×` for it.
+- **A lone tab draws no dot at all**: with a single tab the strip reduces to the
+  `+` button alone, on the window's midline. The tab is always active, is never
+  closable, and already names itself in the header, so a dot would only be a
+  dead affordance. The dots, their badges and the leading
+  `tabStripAdd + dotGap` counterweight all go together, so `+` stays centred.
 - **`+` button**: `tabStripAddSize` square, mono `"+"` Lilex 14, `Muted` →
   `FullContrast` on hover, `InkWash` hover pill at `RadiusMD`,
   `Tooltip("New tab (Cmd+T)")` — Lilex has no U+2318 `⌘` glyph, so shortcuts
@@ -252,7 +258,8 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
   group, flanked by two symmetric `Grow(1).Basis(0)` wings plus a leading
   `tabStripAdd + dotGap` counterweight so the **dots themselves** sit on the
   window's horizontal midline (directly aligned beneath the centred header
-  title) while `+` rides immediately to the right of the last dot.
+  title) while `+` rides immediately to the right of the last dot. A lone tab
+  drops the dots and the counterweight, so `+` takes the midline itself.
 - **Clear button (right edge)**: the right `Grow(1).Basis(0)` wing of the tab
   strip holds the `tabStripAdd` (`24×24`) clear icon button (a monochrome
   broom SVG rendered via `ui.Icon`, `FontSize(13)`, `Muted` → `FullContrast` on
@@ -443,7 +450,8 @@ When implementing (a follow-up task, not this doc):
       inactive, active dot `Accent` fill + outward `Accent` ring (`dotRingSize 15`
       / `dotRingWidth 1.5`), hover tint wash only, `×` swap on the active dot,
       `+` button 24×24 one `dotGap` after the last dot, sliding `maxDots 16`
-      window with clickable `+N` overflow badges on either side.
+      window with clickable `+N` overflow badges on either side; a lone tab
+      draws no dot at all and leaves `+` on the window's midline.
 - [x] `tabtitle.go` — centred click-to-rename header title (Lilex 13/500
       `FullContrast`, absolute `MaxWidth 220`, `InkWash` hover pill) + inline
       `TextInputBase` rename field, laid out on the window controls' horizontal
