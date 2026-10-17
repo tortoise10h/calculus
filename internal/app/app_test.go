@@ -5,27 +5,39 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/tortoise10h/calculus/internal/workspace"
 )
+
+// newBlankApp returns an app over an empty single tab, for tests that type a
+// document from scratch instead of editing the seeded Starter buffer.
+func newBlankApp() *App {
+	return NewWithWorkspace(workspace.New(), nil)
+}
 
 func TestAppViewShell(t *testing.T) {
 	a := New()
 	tt := ui.NewTester(a.View, 720, 520)
 
-	if !tt.HasText("Ready") {
-		t.Fatalf("expected status bar text 'Ready', got texts: %v", tt.Texts())
+	// New() seeds one tab with the starter document, so the header shows its
+	// title and its non-zero sum.
+	if !tt.HasText("Starter") {
+		t.Fatalf("expected the seeded tab title 'Starter', got texts: %v", tt.Texts())
+	}
+	if !tt.HasText("Sum: 168") {
+		t.Fatalf("expected seeded header sum 'Sum: 168', got texts: %v", tt.Texts())
 	}
 }
 
 func TestEditorMultiLineCalculation(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
 	typeLines(tt, "20 + 5 - 12", "10 * 4", "# comment", "(8 + 2) / 2")
 	tt.Frame()
 
-	if want := "20 + 5 - 12\n10 * 4\n# comment\n(8 + 2) / 2"; a.content != want {
-		t.Fatalf("editor content = %q, want %q", a.content, want)
+	if want := "20 + 5 - 12\n10 * 4\n# comment\n(8 + 2) / 2"; a.ActiveTab().Content != want {
+		t.Fatalf("editor content = %q, want %q", a.ActiveTab().Content, want)
 	}
 	for _, want := range []string{"13", "40", "5"} {
 		if !tt.HasText(want) {
@@ -33,7 +45,7 @@ func TestEditorMultiLineCalculation(t *testing.T) {
 		}
 	}
 	if !tt.HasText("Sum: 58") {
-		t.Fatalf("expected status bar 'Sum: 58', got texts: %v", tt.Texts())
+		t.Fatalf("expected header 'Sum: 58', got texts: %v", tt.Texts())
 	}
 }
 
@@ -56,7 +68,7 @@ func TestSetContentEvaluatesDocument(t *testing.T) {
 }
 
 func TestIncompleteExpressionShowsNoResult(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
@@ -74,7 +86,7 @@ func TestIncompleteExpressionShowsNoResult(t *testing.T) {
 }
 
 func TestClickResultCopiesToClipboard(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
@@ -95,7 +107,7 @@ func TestClickResultCopiesToClipboard(t *testing.T) {
 }
 
 func TestLargeResultShowsThousandsSeparators(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
@@ -124,7 +136,7 @@ func TestLargeResultShowsThousandsSeparators(t *testing.T) {
 }
 
 func TestResultAlignsWithItsLine(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
@@ -213,7 +225,7 @@ func TestComputeTextRanges(t *testing.T) {
 }
 
 func TestEditorVariableAssignmentFlow(t *testing.T) {
-	a := New()
+	a := newBlankApp()
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
@@ -226,7 +238,7 @@ func TestEditorVariableAssignmentFlow(t *testing.T) {
 		}
 	}
 	if !tt.HasText("Sum: 150") {
-		t.Fatalf("expected status bar 'Sum: 150', got texts: %v", tt.Texts())
+		t.Fatalf("expected header 'Sum: 150', got texts: %v", tt.Texts())
 	}
 
 	if err := tt.Click("75"); err != nil {
@@ -308,5 +320,3 @@ func TestComputeTextRangesForVariables(t *testing.T) {
 		t.Errorf("incomplete line unresolved 'missing' should be Muted: %+v", r)
 	}
 }
-
-

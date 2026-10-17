@@ -132,10 +132,10 @@ Base-4 rhythm, in DIPs. Use `t.Space(n)` where the theme's spacing unit is wante
 
 | Step | px | Use |
 |---|---|---|
-| 1 | 4 | Tab close-× gap, tight badges |
-| 2 | 8 | Gaps between icon buttons + label in a tab, status bar items |
-| 3 | 12 | Tab bar vertical padding, status bar horizontal padding (current `12` ✓) |
-| 4 | 16 | Editor top/bottom padding (current `editorPadTop = 16` ✓), card padding |
+| 1 | 4 | Gap between the `Sum` block and the `Clear` button, tight badges |
+| 2 | 8 | Gaps between icon buttons + label in a tab, dot hit-box gaps (`dotGap`) |
+| 3 | 12 | Tab strip vertical padding (`Clear`/`Edit` button padding) |
+| 4 | 16 | Editor bottom padding (`editorPadBottom = 16` ✓), card padding |
 | 5 | 24 | Between the editor block and any future top toolbar |
 | 6 | 32 | Popover inner padding |
 
@@ -163,7 +163,7 @@ Native equivalents, all supported directly:
 | Floater shadow | `0 4px 12px rgba(0,0,0,0.08)` | Popovers / menus: `Shadow(0, 4, 12, 0, ui.RGBA(0,0,0,0.08))` |
 | Hairline | `1px solid rgba(25,29,38,0.14)` on interactive | `Border(1, InkHairline)` |
 | Default panel border | `1px solid hsl(220,13%,90%)` | `Border(1, BorderLight)` |
-| Active inset bar | `inset 2px 0 var(--accent)` | `InsetShadow(2, 0, 0, 0, Accent)` on the active tab (see TabBar) |
+| Active marker | `inset 2px 0 var(--accent)` (top tab bars) | For the bottom dot strip the active marker is the **outward `Accent` ring**, not an inset bar — see the Tab strip recipe |
 | Film grain | body::after noise overlay | ❌ **Not portable** — a GPU-painted UI has no cheap per-pixel noise overlay without a shader/material. Skip it; the warm `BG` carries the paper feel on its own. Explicitly accepted loss. |
 
 Borders are always 1px, inside the box (MyGo's `Border` is border-box ✓).
@@ -186,35 +186,113 @@ separator wants a softer read.
 
 ### Window / root (`app.View`) & Integrated Header Bar
 
-- Window uses `mygo.TitleBarHiddenInset` with `BackgroundColor: "#ffffff"` so the
-  paper sheet (`Surface`) extends seamlessly behind the macOS traffic lights
-  without a contrasting OS titlebar or cramped inner borders.
+- Window uses `mygo.TitleBarHiddenInset` with `TrafficLightPosition: &mygo.Point{X: 18, Y: 13}`
+  and `BackgroundColor: "#ffffff"` so the paper sheet (`Surface`) extends
+  seamlessly behind the macOS traffic lights without a contrasting OS titlebar,
+  and the traffic lights sit centred on a `38` DIP band (`12 + 2*13`).
 - Root column fills the window with `Surface` (`#ffffff`):
-  1. **Seamless Draggable Header Bar** (`height = max(c.TitleBar().Height, 38)`):
-     sits on `Surface` (`#ffffff`) with no bottom border so the editor flows
-     directly beneath the window controls, offering a subtle `"Clear"` action on
-     the right when the sheet has content.
+  1. **Seamless Draggable Header Bar** (`height = c.TitleBar().Height`, floored
+     at 38 only when the window reports no controls): sits on `Surface`
+     (`#ffffff`) with no bottom border so the editor flows directly beneath the
+     window controls, sharing their horizontal bar. It carries the clickable
+     active tab title centred in the window, and `Sum` on the right.
   2. **Full-Width Editor + Results Row**: `Surface` (`#ffffff`), no outer margin
      or vertical divider wall so the space feels open and continuous.
-  3. **Status / Footer Bar**: separated by a single `1px` `BorderLight` hairline
-     at the bottom of `Surface`.
+   3. **Tab strip (bottom bar)**: separated by a single `1px` `BorderLight`
+      hairline above it, on `Surface`, with the centred dot strip and a
+      right-aligned clear icon button when the active tab has content.
 
-### TabBar (Lite `ui.TabsBase`)
+The header bar carries the **document** identity — centred active tab title and
+right-aligned `Sum` / copy feedback — and the bottom bar carries only
+**navigation** (one centred dot per tab, then `+`). Dot counts are unbounded, so
+sharing one row with `Sum` would invite crowding; sum and copy feedback belong
+with the document the active tab names in the header.
 
-- Height ≈ 36; background `Paper.Surface`; bottom hairline `BorderLight`
-  via `BorderWidth(0, 0, 1, 0)`.
-- Tab label: Lilex 12.5/13, weight 500 — inactive `Muted`, active `FullContrast`.
-- Active tab: does **not** get a filled pill. It gets the classing
-  paper-active treatment: `InsetShadow(2, 0, 0, 0, Accent)` on its left edge
-  plus a 2px `Accent` underline line under the label
-  (`BorderWidth(0, 0, 2, 0)` on a bottom-aligned box), matching the TOC
-  active-marker convention.
-- Hover (inactive tab): `Accent.Alpha(0.05)` wash. Never elevate.
-- Close "×" & "+" affordances: borderless icon buttons 24×24, radius 6,
-  `Muted` icon; hover → neutral `ink-wash rgba(25,29,38,0.045)` and
-  `FullContrast`. Deleting = danger (`Danger`) on pressed only.
-- New-tab "+" and tab close use the mono family too (they are glyph
-  characters in mono — no custom icon set needed).
+### Tab strip (bottom bar, dots)
+
+`internal/app/tabstrip.go`. Height `30` (`tabStripHeight`), background
+`Surface`, a `BorderLight` hairline above it, horizontal padding `28` on both
+sides so the strip lines up with the editor's `editorPadX`.
+
+Size tokens (DIPs), all in `internal/app/theme.go`:
+
+| Token | Value | Use |
+|---|---|---|
+| `dotSize` | `6` | inactive dot diameter |
+| `dotRingSize` | `15` | active dot's outward ring diameter |
+| `dotRingWidth` | `1.5` | ring stroke width |
+| `dotGap` | `2` | gap between dot hit boxes |
+| `dotHitSize` | `22` | square hit box per dot (pitch = `dotHitSize + dotGap`) |
+| `maxDots` | `16` | dots drawn before a `+N` counter appears |
+| `tabStripAddSize` | `24` | `+` button box |
+
+- **Inactive dot**: filled `Muted`; on hover → `FullContrast`.
+- **Active dot**: filled `Accent` plus a `dotRingWidth` `Accent` **stroked** ring
+  of diameter `dotRingSize` drawn *around* it — the outward circle. Both are
+  painted centred in the dot's hit box with
+  `DrawOver(func(p *ui.Painter, r ui.Rect))`, so the strip stays geometrically
+  stable on hover.
+- **Hover is a tint wash on the hit box only** (`Accent.Alpha(0.05)`, radius
+  `RadiusMD`) — never a filled pill, never elevation or shadow.
+- **Close affordance**: hovering the *active* dot swaps the dot glyph for `×`
+  (U+00D7, present in Lilex) in `Muted`, turning `Danger` on hover of the `×`
+  itself. The ring is skipped while the `×` is shown so the glyph reads cleanly.
+  The **last remaining tab is never closable**: no `×` for it.
+- **`+` button**: `tabStripAddSize` square, mono `"+"` Lilex 14, `Muted` →
+  `FullContrast` on hover, `InkWash` hover pill at `RadiusMD`,
+  `Tooltip("New tab (Cmd+T)")`. It sits directly after the last dot, one
+  `dotGap` away — never parked at the far edge of the bar.
+- **Centring**: the dots, the optional `+N` counter and the `+` button form one
+  group, flanked by two symmetric `Grow(1).Basis(0)` wings plus a leading
+  `tabStripAdd + dotGap` counterweight so the **dots themselves** sit on the
+  window's horizontal midline (directly aligned beneath the centred header
+  title) while `+` rides immediately to the right of the last dot.
+- **Clear button (right edge)**: the right `Grow(1).Basis(0)` wing of the tab
+  strip holds the `tabStripAdd` (`24×24`) clear icon button (a monochrome
+  broom SVG rendered via `ui.Icon`, `FontSize(13)`, `Muted` → `FullContrast` on
+  hover, `InkWash` hover pill at `RadiusMD`, `Label("Clear")`,
+  `Tooltip("Clear this tab")`), shown only when the active tab is non-empty.
+  Keeping `Clear` in the bottom bar leaves the top-right header dedicated to
+  `Sum` so large numbers never crowd on narrow windows.
+- Past `maxDots` tabs, the strip becomes a sliding `maxDots`-wide window that
+  tracks the active tab, with a clickable `+N` badge (Lilex 11, `Muted` →
+  `FullContrast` on hover, `HoverWash` pill at `RadiusMD`, `Padding(3, 6)`) on
+  whichever side has hidden tabs (`N` earlier tabs on the left, `N` later tabs
+  on the right). Clicking a `+N` badge pages the dot window in that direction so
+  every tab remains reachable with the mouse.
+
+### Header title & rename
+
+`internal/app/tabtitle.go`.
+
+- **Window-control alignment**: the header row sits on the *same horizontal bar*
+  as the macOS traffic lights. `TrafficLightPosition: &mygo.Point{X: 18, Y: 13}`
+  places the traffic lights inside a `38` DIP band (`12 + 2*13`) whose vertical
+  centre matches the header row's `c.TitleBar().Height` **verbatim**. Its minimum
+  left clearance is `c.TitleBar().Left + 12`, resolved by `headerMetrics`. The
+  `38` fallback applies only when the window reports no controls at all (plain
+  or full-screen). `DragWindow()` stays on the header.
+- **Centred layout**: the header row uses two symmetric `Grow(1).Basis(0)` wings
+  flanking `tabTitle`. The left wing has `MinWidth(padLeft)` to clear the
+  traffic lights; the right wing uses `Justify(ui.End)` and `resultPadRight`
+  (`28` DIP) right padding so `Sum` aligns with the results column while the
+  title stays pinned to the window's horizontal midline regardless of right-hand
+  content width.
+- **Click-to-rename title**: Lilex `13`, weight `500`, `FullContrast`,
+  `.SingleLine()` with an **absolute** `MaxWidth(titleMaxWidth = 220)` inside a
+  clickable pill (`Padding(3, 8)`, `RadiusMD`, `InkWash` on hover,
+  `CursorPointer`, `Tooltip("Rename tab (Cmd+R)")`). Clicking the title (or
+  pressing `Cmd+R`) opens the inline rename field without needing a permanent
+  `Edit` button beside the title. (Lilex has no U+2318 `⌘` glyph, so shortcuts
+  are written `Cmd+` in text.)
+- **Rename field**: replaces the title pill in place at the centre of the header —
+  `ui.TextInputBase(c, &a.draft)` with `.AutoFocus()`, `MinWidth(140)`,
+  `MaxWidth(titleMaxWidth)`, `Background(Surface)`, `Border(1, InkHairline)`,
+  `Radius(RadiusLG)`, `Padding(2, 6)`, `Font(FontMono).FontSize(13)
+  .TextColor(FullContrast)`. `Enter` commits, `Escape` cancels, and losing
+  focus commits (Finder behaviour). Never show an error state while renaming.
+- **Right side**: `Sum` / transient `Copied <val>` status block, with no other
+  buttons competing for horizontal room on narrow windows.
 
 ### Editor (`TextAreaBase`)
 
@@ -273,15 +351,19 @@ func applyStyle(c *ui.Context) {
 `Critical`, `Danger` variants exist across the theme struct; adjust names if
 the version differs.)
 
-### Status bar
+### Status & Sum (header, right side)
 
-Height 30, on `Surface` (`#ffffff`) with a thin horizontal light grey divider
-(`BorderLight` `#e3e5e9`) above it and horizontal padding `28 DIPs` aligning with
-the editor and result margins.
-- Left: Lilex 12, `Muted` (`"Ready"`), flipping to `Accent` (`"Copied <val>"`)
-  for 5s on copy.
-- Right: interactive `"Sum: <total>"` in `FullContrast` weight 500 with a subtle
-  `HoverWash` pill on hover that copies the sum when clicked.
+Lives in the **header bar**, not the bottom bar — see the layout note above.
+On `Surface` (`#ffffff`).
+- `Sum`: `"Sum: <total>"` in `FullContrast` weight 500, `FontFeatures("tnum")`,
+  with a subtle `HoverWash` pill on hover that copies the sum when clicked.
+  When the document has no results yet, render `"Sum: 0"` in `Muted` and
+  **without** a click handler, so the header never reflows the moment the first
+  result appears.
+- Copy confirmation: clicking a result or `Sum` swaps the `Sum` readout for
+  `"Copied <val>"` in `Accent` (Lilex 12, weight 500, `FontFeatures("tnum")`)
+  for 5s, with `c.After(...)` scheduling the redraw that restores `Sum`. No
+  idle `"Ready"` label is shown next to `Sum`.
 
 ### Buttons (future toolbar / menu bar)
 
@@ -299,7 +381,7 @@ the editor and result margins.
 
 Styled via `ui.ToastViewportBase` as a compact floating pill (`RadiusPill` 12,
 `FullContrast` `#191d26` fill, `BG` `#f7f6f2` text, Lilex 12, `Padding(6, 12)`).
-Result copy confirmations use the inline footer status pill rather than spawning
+Result copy confirmations use the inline header status text rather than spawning
 a toast banner.
 
 ---
@@ -351,5 +433,15 @@ When implementing (a follow-up task, not this doc):
 - [x] `editor.go` — FontSize 14, LineHeight 1.6, Font/FontFeatures/TextColor/SelectionColor.
 - [x] `resultColumn` — value color `Accent` weight 500, hover wash + cursor.
 - [x] `app.View` — root background → `BG`, surfaces → white.
-- [ ] Tab bar (Phase 3) — style per the TabBar recipe above (mono 12.5 labels,
-      inset accent active bar + underline, borderless × + hover wash).
+- [x] `tabstrip.go` — bottom dot strip, centred as one group: `dotSize 6`
+      inactive, active dot `Accent` fill + outward `Accent` ring (`dotRingSize 15`
+      / `dotRingWidth 1.5`), hover tint wash only, `×` swap on the active dot,
+      `+` button 24×24 one `dotGap` after the last dot, sliding `maxDots 16`
+      window with clickable `+N` overflow badges on either side.
+- [x] `tabtitle.go` — centred click-to-rename header title (Lilex 13/500
+      `FullContrast`, absolute `MaxWidth 220`, `InkWash` hover pill) + inline
+      `TextInputBase` rename field, laid out on the window controls' horizontal
+      bar via `headerMetrics` and `TrafficLightPosition`.
+- [x] Status text and `Sum` moved from the bottom bar into the header.
+- [x] `internal/workspace/` — `Tab`/`Workspace` models (`tab.go`) and atomic
+      JSON auto-save to `workspace.json` (`store.go`).
