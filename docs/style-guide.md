@@ -231,7 +231,12 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
   of diameter `dotRingSize` drawn *around* it — the outward circle. Both are
   painted centred in the dot's hit box with
   `DrawOver(func(p *ui.Painter, r ui.Rect))`, so the strip stays geometrically
-  stable on hover.
+  stable on hover. Paint them as **`ui.Path` circles** (`FillPath` /
+  `StrokePath`, the ring stroked on its centre line at
+  `(dotRingSize - dotRingWidth) / 2`), never as rects: rect `Fill` / `Stroke`
+  snap each shape's edges to whole device pixels on their own, so the 15 DIP
+  ring and the 6 DIP dot land on different half-pixels at 1x / 1.5x and the
+  ring reads visibly off-centre around the dot.
 - **Hover is a tint wash on the hit box only** (`Accent.Alpha(0.05)`, radius
   `RadiusMD`) — never a filled pill, never elevation or shadow.
 - **Close affordance**: hovering the *active* dot swaps the dot glyph for `×`

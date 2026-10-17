@@ -240,17 +240,21 @@ func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closa
 			dotColor = FullContrast
 		}
 
+		// Painted as Path circles, not rects: Painter.Fill / Painter.Stroke
+		// snap each rect's edges to whole device pixels, and a 15 DIP ring
+		// (half-extent 7.5) against a 6 DIP dot (half-extent 3) then snap to
+		// different half-pixels at 1x and 1.5x, leaving the ring visibly
+		// off-centre around the dot. Paths share cx, cy exactly at every
+		// scale, and the stroke keeps its true 1.5 DIP width.
 		cx, cy := r.X+r.W/2, r.Y+r.H/2
 		if active {
-			p.Stroke(ui.Rect{
-				X: cx - dotRingSize/2, Y: cy - dotRingSize/2,
-				W: dotRingSize, H: dotRingSize,
-			}, Accent, dotRingSize/2, dotRingWidth)
+			// The stroke straddles its circle, so the ring band spans
+			// exactly dotRingSize outward: centre line at half the ring's
+			// inner diameter.
+			mid := (dotRingSize - dotRingWidth) / 2
+			p.StrokePath(new(ui.Path).Circle(cx, cy, mid), dotRingWidth, Accent)
 		}
-		p.Fill(ui.Rect{
-			X: cx - dotSize/2, Y: cy - dotSize/2,
-			W: dotSize, H: dotSize,
-		}, dotColor, dotSize/2)
+		p.FillPath(new(ui.Path).Circle(cx, cy, dotSize/2), dotColor)
 	})
 }
 
