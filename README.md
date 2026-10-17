@@ -1,7 +1,5 @@
 # Calculus
 
-## Table of Contents
-
 - [1. Introduction](#1-introduction)
 - [2. Demo](#2-demo)
 - [3. Installation](#3-installation)
@@ -13,11 +11,9 @@
 
 Calculus is a lightweight desktop calculator inspired by [Numi](https://numi.app/). It is written in 100% pure Go with [MyGo Native UI](https://github.com/egoist/mygo), so the app is small and fast. Open it and type math on many lines, and use variables for complex calculations.
 
-<img width="682" height="548" alt="Calculus screenshot" src="https://github.com/user-attachments/assets/f3f5284a-0244-4575-bb89-74999a0fd72d" />
-
 ## 2. Demo
 
-<!-- The demo video goes here. -->
+https://github.com/user-attachments/assets/24d914e6-c4ff-45f6-93bb-f43fda1628f9
 
 ## 3. Installation
 
@@ -64,6 +60,7 @@ The build writes the package for your OS to `build/`:
 | Click to copy | Click a result to copy it. Click the sum to copy the total. |
 | Document sum | The header shows the sum of all results in the active tab. |
 | Tabs | Keep separate calculations in tabs. Add with `Cmd+T`, close with `Cmd+W`, switch with `Cmd+1`–`Cmd+9` or `Ctrl+Tab`. Click a tab name to rename it. |
+| Quickly switch between tabs | Hold `Cmd` and choose number from `1 - 9` to quickly switch between tabs. |
 | Auto-save | All tabs are saved to disk and restored at the next start. |
 | Syntax highlighting | Numbers, names, operators, and comments have distinct colors. |
 | Clean numbers | Results use thousands separators. Float errors are rounded away (`0.1 + 0.2` = `0.3`). |
