@@ -1,7 +1,6 @@
 # Calculus Style Guide — paper-blueprint on MyGo Native UI
 
 > This guide ports the **paper-blueprint** style
-> (`/Users/sunday/Dev/Personal/Projects/ui-skills/styles/paper-blueprint/style-guide.md`)
 > from its source (DocNotate, HTML/CSS) onto **MyGo Native UI** (`github.com/egoist/mygo/ui`),
 > which renders on the GPU with Go code — no HTML, no CSS.
 >
