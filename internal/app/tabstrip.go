@@ -186,17 +186,51 @@ func (a *App) stripOverflow(c *ui.Context, n, dir int, tooltip string) {
 	ui.Box(c).Width(dotGap)
 }
 
+// tabNumber returns the `Cmd+digit` label that activates the tab at index, or
+// "" past the ninth tab where no chord exists: digitKeys binds Cmd+1 … Cmd+9
+// only, and a number is a promise that pressing it does something. The strip
+// paints it in place of the dot while Cmd is held.
+func tabNumber(index int) string {
+	if index < 0 || index >= len(digitKeys) {
+		return ""
+	}
+	return strconv.Itoa(index + 1)
+}
+
+// dotColour is the dot's colour rules — the active tab Accent, the hovered one
+// FullContrast, the rest Muted — shared by the painted dot and the hold-Cmd
+// number that stands in for it.
+func dotColour(active, hovered bool) ui.Color {
+	if active {
+		return Accent
+	}
+	if hovered {
+		return FullContrast
+	}
+	return Muted
+}
+
 // tabDot paints one tab.
 //
 // The active dot is Accent with an Accent ring stroked outward around it. The
 // hit box is a fixed square on every frame, so the strip never shifts under the
 // pointer as it moves across it. Hovering the active dot swaps the dot — ring
 // and all — for a × close glyph, because the last tab in the strip has no
-// other way to be dismissed.
+// other way to be dismissed. While Cmd is held the dot yields to the tab's
+// Cmd+digit number instead, so the switch chords are discoverable in place:
+// the number stands down the × swap but keeps the active ring.
 func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closable bool) {
 	title := ""
 	if tab != nil {
 		title = tab.Title
+	}
+
+	// number is the tab's chord label while Cmd is held. Modifiers() is live
+	// state: MyGo repaints on every modifier change, so the numbers appear
+	// and go with the key.
+	number := ""
+	if c.Modifiers()&ui.Cmd != 0 {
+		number = tabNumber(index)
 	}
 
 	// showClose is read by the click handler below, which MyGo runs after this
@@ -220,7 +254,7 @@ func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closa
 	if hovered {
 		item.Background(HoverWash)
 	}
-	showClose = active && closable && hovered
+	showClose = active && closable && hovered && number == ""
 
 	item.Children(func() {
 		if showClose {
@@ -233,6 +267,14 @@ func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closa
 			if glyph.Hovered() {
 				glyph.TextColor(Danger)
 			}
+		} else if number != "" {
+			// The number stands where the dot stood, in the dot's own
+			// colour rules, so the swap reads as the same slot changing
+			// state rather than a new element appearing.
+			ui.Text(c, number).
+				FontSize(11).
+				Font(FontMono).
+				TextColor(dotColour(active, hovered))
 		}
 		// Otherwise there is no child at all: DrawOver below paints the dot,
 		// and nothing can overlap it.
@@ -243,13 +285,6 @@ func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closa
 	}
 
 	item.DrawOver(func(p *ui.Painter, r ui.Rect) {
-		dotColor := Muted
-		if active {
-			dotColor = Accent
-		} else if hovered {
-			dotColor = FullContrast
-		}
-
 		// Painted as Path circles, not rects: Painter.Fill / Painter.Stroke
 		// snap each rect's edges to whole device pixels, and a 15 DIP ring
 		// (half-extent 7.5) against a 6 DIP dot (half-extent 3) then snap to
@@ -264,7 +299,9 @@ func (a *App) tabDot(c *ui.Context, tab *workspace.Tab, index int, active, closa
 			mid := (dotRingSize - dotRingWidth) / 2
 			p.StrokePath(new(ui.Path).Circle(cx, cy, mid), dotRingWidth, Accent)
 		}
-		p.FillPath(new(ui.Path).Circle(cx, cy, dotSize/2), dotColor)
+		if number == "" {
+			p.FillPath(new(ui.Path).Circle(cx, cy, dotSize/2), dotColour(active, hovered))
+		}
 	})
 }
 

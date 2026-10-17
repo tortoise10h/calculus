@@ -271,6 +271,7 @@ func TestCloseActiveDotClosesTheTab(t *testing.T) {
 	tt := ui.NewTester(a.View, w, h)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyT) // the second tab is active
+	tt.HoldModifiers(0)     // Key leaves Cmd held; the × swap stands down while it is
 	tt.Frame()
 
 	// Hovering the active dot swaps it for a close glyph. The strip is
@@ -319,9 +320,18 @@ func TestALoneTabShowsNoDot(t *testing.T) {
 		t.Fatal("the bottom strip painted an Accent dot for a lone tab")
 	}
 
+	// Holding Cmd must not resurrect anything either: the number badges
+	// live on the dots, and a lone tab has none.
+	tt.HoldModifiers(ui.Cmd)
+	tt.Frame()
+	if stripPaintsAccent(tt.Image(), h) {
+		t.Fatal("the bottom strip painted an Accent number for a lone tab")
+	}
+
 	// The same scan must find the dots once a second tab exists, or the
-	// negative above proves nothing.
+	// negatives above prove nothing.
 	tt.Key(ui.Cmd, ui.KeyT)
+	tt.HoldModifiers(0) // the scan must see dots, not hold-Cmd numbers
 	tt.Frame()
 	if !stripPaintsAccent(tt.Image(), h) {
 		t.Fatal("no Accent dot painted with two tabs; the scan cannot see dots")
@@ -350,6 +360,7 @@ func TestHoveringAnInactiveDotKeepsItADot(t *testing.T) {
 	tt := ui.NewTester(a.View, w, h)
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyT) // tab 1 active
+	tt.HoldModifiers(0)     // Key leaves Cmd held; hold-Cmd shows numbers, not dots
 	tt.Frame()
 
 	// Hovering an inactive dot must not offer to close it.
@@ -369,6 +380,116 @@ func TestHoveringAnInactiveDotKeepsItADot(t *testing.T) {
 	}
 	if len(a.ws.Tabs) != 2 {
 		t.Errorf("tabs = %d, want 2; the click closed a tab", len(a.ws.Tabs))
+	}
+}
+
+// TestHoldCmdRevealsTabNumbers is the discoverability rule: holding Cmd swaps
+// each dot for the tab's Cmd+digit number, right where the dot sat, so the
+// switch chords are visible where they act. Releasing Cmd swaps the dots back.
+func TestHoldCmdRevealsTabNumbers(t *testing.T) {
+	const w, h = 720, 520
+
+	a := newBlankApp()
+	tt := ui.NewTester(a.View, w, h)
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.KeyT)
+	tt.Key(ui.Cmd, ui.KeyT)
+	tt.HoldModifiers(0) // nothing is held until the test says so
+	tt.Frame()
+
+	for _, d := range []string{"1", "2", "3"} {
+		if _, ok := tt.Find(d); ok {
+			t.Fatalf("tab number %q showing without Cmd held, texts: %v", d, tt.Texts())
+		}
+	}
+
+	tt.HoldModifiers(ui.Cmd)
+	tt.Frame()
+	for i, d := range []string{"1", "2", "3"} {
+		r, ok := tt.Find(d)
+		if !ok {
+			t.Fatalf("no %q while Cmd is held, texts: %v", d, tt.Texts())
+		}
+		// The number takes the dot's exact slot, so the strip never shifts.
+		centre := float64(r.X + r.W/2)
+		if math.Abs(centre-float64(dotCenterX(w, 3, i))) > 1 {
+			t.Errorf("number %q centre = %.1f, want %.1f (dot %d)", d, centre, dotCenterX(w, 3, i), i)
+		}
+	}
+
+	tt.HoldModifiers(0)
+	tt.Frame()
+	for _, d := range []string{"1", "2", "3"} {
+		if _, ok := tt.Find(d); ok {
+			t.Fatalf("tab number %q still showing after Cmd was released, texts: %v", d, tt.Texts())
+		}
+	}
+}
+
+// TestHoldCmdNumbersStandDownTheCloseSwap: while Cmd is held the user is
+// reaching for a chord, not for close, so the hovered active dot keeps its
+// number instead of the × swap. Releasing Cmd brings the × straight back.
+//
+// Hover is established before Cmd is held because the tester's Move carries
+// no modifiers and the engine takes a pointer event's mods as the held state
+// (a real pointer event reports the ones held, so the app is unaffected).
+func TestHoldCmdNumbersStandDownTheCloseSwap(t *testing.T) {
+	const w, h = 720, 520
+
+	a := newBlankApp()
+	tt := ui.NewTester(a.View, w, h)
+	tt.Frame()
+	tt.Key(ui.Cmd, ui.KeyT) // the second tab is active
+	tt.HoldModifiers(0)     // Key leaves Cmd held; this test drives it by hand
+
+	dotX := dotCenterX(w, 2, 1)
+	dotY := float32(h) - tabStripHeight/2
+	tt.Move(dotX, dotY) // hover the active dot first...
+	tt.Frame()
+
+	if _, ok := tt.Find(closeGlyph); !ok {
+		t.Fatalf("no %q on the hovered active dot before Cmd, texts: %v", closeGlyph, tt.Texts())
+	}
+
+	tt.HoldModifiers(ui.Cmd) // ...then hold Cmd
+	tt.Frame()
+
+	if _, ok := tt.Find(closeGlyph); ok {
+		t.Fatalf("the hovered active dot offered a %q while Cmd was held, texts: %v", closeGlyph, tt.Texts())
+	}
+	if _, ok := tt.Find("2"); !ok {
+		t.Fatalf("the hovered active dot lost its number while Cmd was held, texts: %v", tt.Texts())
+	}
+
+	tt.HoldModifiers(0) // ...and the close affordance returns
+	tt.Frame()
+	if _, ok := tt.Find(closeGlyph); !ok {
+		t.Fatalf("no %q after releasing Cmd, texts: %v", closeGlyph, tt.Texts())
+	}
+}
+
+// TestHoldCmdLabelsOnlyTheFirstNineTabs: a number is a promise that a chord
+// exists, and digitKeys binds Cmd+1 … Cmd+9 only, so the tenth tab keeps its
+// dot rather than showing a number nothing would honour.
+func TestHoldCmdLabelsOnlyTheFirstNineTabs(t *testing.T) {
+	const w, h = 720, 520
+
+	a := newBlankApp()
+	tt := ui.NewTester(a.View, w, h)
+	tt.Frame()
+	for i := 0; i < 9; i++ {
+		tt.Key(ui.Cmd, ui.KeyT) // 10 tabs in all, all inside maxDots
+	}
+	tt.HoldModifiers(ui.Cmd)
+	tt.Frame()
+
+	for _, d := range []string{"1", "2", "3", "4", "5", "6", "7", "8", "9"} {
+		if _, ok := tt.Find(d); !ok {
+			t.Fatalf("no %q for a tab with a Cmd+%s chord, texts: %v", d, d, tt.Texts())
+		}
+	}
+	if _, ok := tt.Find("10"); ok {
+		t.Fatal("the tenth tab showed a number, but no chord activates it")
 	}
 }
 

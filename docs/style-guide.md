@@ -249,6 +249,15 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
   closable, and already names itself in the header, so a dot would only be a
   dead affordance. The dots, their badges and the leading
   `tabStripAdd + dotGap` counterweight all go together, so `+` stays centred.
+- **Hold-`Cmd` numbers teach the chords**: while `Cmd` is held (read live from
+  `c.Modifiers()` — MyGo repaints on every modifier change) each dot swaps its
+  fill for the tab's `Cmd+digit` number, Lilex 11 under the dot's own colour
+  rules: `Muted`, `FullContrast` on hover, `Accent` on the active tab. The
+  active dot keeps its ring so the active marker never changes; the `×` swap
+  stands down, because someone holding `Cmd` is reaching for a chord, not for
+  close. Only the first nine dots carry a number — `digitKeys` binds
+  `Cmd+1`…`Cmd+9`, and a number is a promise that a chord exists — so a dot
+  past the ninth keeps its dot. Releasing `Cmd` brings the dots straight back.
 - **`+` button**: `tabStripAddSize` square, mono `"+"` Lilex 14, `Muted` →
   `FullContrast` on hover, `InkWash` hover pill at `RadiusMD`,
   `Tooltip("New tab (Cmd+T)")` — Lilex has no U+2318 `⌘` glyph, so shortcuts
@@ -451,7 +460,8 @@ When implementing (a follow-up task, not this doc):
       / `dotRingWidth 1.5`), hover tint wash only, `×` swap on the active dot,
       `+` button 24×24 one `dotGap` after the last dot, sliding `maxDots 16`
       window with clickable `+N` overflow badges on either side; a lone tab
-      draws no dot at all and leaves `+` on the window's midline.
+      draws no dot at all and leaves `+` on the window's midline; holding
+      `Cmd` swaps each of the first nine dots for its `Cmd+digit` number.
 - [x] `tabtitle.go` — centred click-to-rename header title (Lilex 13/500
       `FullContrast`, absolute `MaxWidth 220`, `InkWash` hover pill) + inline
       `TextInputBase` rename field, laid out on the window controls' horizontal
