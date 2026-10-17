@@ -28,7 +28,7 @@
 - **Strict Separation**: Keep `internal/eval` and `internal/workspace` decoupled from `mygo/ui` so they remain fast and unit-testable with `go test ./...`.
 - **Live Typing UX**: Never show jarring errors on incomplete expressions while the user is mid-typing (e.g. `x = 10 + `).
 - **Zero-Allocation / Immediate-Mode UI**: Keep `ui.Context` view functions lightweight as they run every frame.
-- **Window-level chords**: register app shortcuts with `c.OnShortcut(...)` at the top of the root `View`, before children are built. MyGo routes those before the focused input, so `Cmd+T`/`Cmd+W`/`Cmd+R` are never typed into the editor. Gate them while a rename field is open.
+- **Window-level chords**: register app shortcuts with `c.OnShortcut(...)` at the top of the root `View`, before children are built. MyGo routes those before the focused input, so `Cmd+T`/`Cmd+W` are never typed into the editor. Gate them while a rename field is open.
 - **Auto-save**: content edits are debounced (800 ms); structural changes (add / close / switch / rename) flush immediately so a crash never loses the tab list. `mygo.App.OnBeforeQuit` → `App.Flush()` covers quit.
 - **Plans**: Check `plans/` before implementing features.
 

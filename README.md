@@ -9,7 +9,7 @@ A fast, lightweight desktop calculator inspired by [Numi](https://numi.app/), bu
 - **Free-Style Multi-Line Calculation**: Type math expressions across multiple lines (`20 + 5 - 12`) and see results immediately aligned on the right side.
 - **Variable Assignment**: Define and reuse variables across lines (`drink_cost = 10 + 5`, `total = drink_cost + meal_cost`).
 - **Number Shorthand**: `100k` = 100 000, `10m`/`10tr` = 10 000 000, `1b`/`1t` = 1 000 000 000 (`tr`/`t`: Vietnamese triệu/tỷ).
-- **Multiple Tabs**: Organize separate calculations into tabs (`Cmd+T`, `Cmd+W`, `Cmd+R`, `Cmd+1`–`Cmd+9`) with automatic local auto-save — the session is written to `workspace.json` and restored on launch.
+- **Multiple Tabs**: Organize separate calculations into tabs (`Cmd+T`, `Cmd+W`, `Cmd+1`–`Cmd+9`) with automatic local auto-save — the session is written to `workspace.json` and restored on launch.
 
 ## Project Structure
 

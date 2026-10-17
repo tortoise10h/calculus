@@ -253,7 +253,6 @@ func (a *App) registerShortcuts(c *ui.Context) {
 
 	c.OnShortcut(ui.Cmd, ui.KeyT, a.addTab)
 	c.OnShortcut(ui.Cmd, ui.KeyW, func() { a.closeTab(a.ws.ActiveIndex()) })
-	c.OnShortcut(ui.Cmd, ui.KeyR, a.beginRename)
 	for i, key := range digitKeys {
 		n := i
 		c.OnShortcut(ui.Cmd, key, func() { a.setActive(n) })

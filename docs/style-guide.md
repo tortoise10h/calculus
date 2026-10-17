@@ -245,7 +245,8 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
   The **last remaining tab is never closable**: no `×` for it.
 - **`+` button**: `tabStripAddSize` square, mono `"+"` Lilex 14, `Muted` →
   `FullContrast` on hover, `InkWash` hover pill at `RadiusMD`,
-  `Tooltip("New tab (Cmd+T)")`. It sits directly after the last dot, one
+  `Tooltip("New tab (Cmd+T)")` — Lilex has no U+2318 `⌘` glyph, so shortcuts
+  are written `Cmd+` in text. It sits directly after the last dot, one
   `dotGap` away — never parked at the far edge of the bar.
 - **Centring**: the dots, the optional `+N` counter and the `+` button form one
   group, flanked by two symmetric `Grow(1).Basis(0)` wings plus a leading
@@ -286,10 +287,10 @@ Size tokens (DIPs), all in `internal/app/theme.go`:
 - **Click-to-rename title**: Lilex `13`, weight `500`, `FullContrast`,
   `.SingleLine()` with an **absolute** `MaxWidth(titleMaxWidth = 220)` inside a
   clickable pill (`Padding(3, 8)`, `RadiusMD`, `InkWash` on hover,
-  `CursorPointer`, `Tooltip("Rename tab (Cmd+R)")`). Clicking the title (or
-  pressing `Cmd+R`) opens the inline rename field without needing a permanent
-  `Edit` button beside the title. (Lilex has no U+2318 `⌘` glyph, so shortcuts
-  are written `Cmd+` in text.)
+  `CursorPointer`, `Tooltip("Rename tab")`). Clicking the title opens the
+  inline rename field without needing a permanent `Edit` button beside the
+  title. Rename is click-only by design: there is deliberately no `Cmd+R`
+  chord.
 - **Rename field**: replaces the title pill in place at the centre of the header —
   `ui.TextInputBase(c, &a.draft)` with `.AutoFocus()`, `MinWidth(140)`,
   `MaxWidth(titleMaxWidth)`, `Background(Surface)`, `Border(1, InkHairline)`,

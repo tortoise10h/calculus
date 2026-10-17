@@ -341,10 +341,12 @@ func TestRenameActiveTab(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
-	tt.Key(ui.Cmd, ui.KeyR)
+	if err := tt.Click("Starter"); err != nil {
+		t.Fatalf("click title to rename: %v", err)
+	}
 	tt.Frame()
 	if !a.renaming {
-		t.Fatal("Cmd+R did not open the rename field")
+		t.Fatal("clicking the title did not open the rename field")
 	}
 
 	// The field starts seeded with the current title, so select-all then retype.
@@ -372,7 +374,9 @@ func TestRenameEscapeKeepsTheOldTitle(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
-	tt.Key(ui.Cmd, ui.KeyR)
+	if err := tt.Click("Starter"); err != nil {
+		t.Fatalf("click title to rename: %v", err)
+	}
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Frame()
@@ -395,7 +399,9 @@ func TestRenameWithABlankDraftKeepsTheOldTitle(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
-	tt.Key(ui.Cmd, ui.KeyR)
+	if err := tt.Click("Starter"); err != nil {
+		t.Fatalf("click title to rename: %v", err)
+	}
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Key(0, ui.KeyBackspace)
@@ -414,7 +420,9 @@ func TestShortcutsDoNotLeakIntoTheEditorWhileRenaming(t *testing.T) {
 	tt := ui.NewTester(a.View, 720, 520)
 	tt.Frame()
 
-	tt.Key(ui.Cmd, ui.KeyR)
+	if err := tt.Click("Starter"); err != nil {
+		t.Fatalf("click title to rename: %v", err)
+	}
 	tt.Frame()
 
 	// While the rename field is open, tab chords must not create or close tabs.
@@ -539,7 +547,9 @@ func TestStructuralChangesSaveImmediately(t *testing.T) {
 		t.Fatalf("saved tabs = %d, want 2", len(store.last.Tabs))
 	}
 
-	tt.Key(ui.Cmd, ui.KeyR)
+	if err := tt.Click("Untitled 2"); err != nil {
+		t.Fatalf("click title to rename: %v", err)
+	}
 	tt.Frame()
 	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Type("Groceries")

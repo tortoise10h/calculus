@@ -21,7 +21,7 @@ func (a *App) tabTitle(c *ui.Context) {
 		Padding(3, 8).
 		Radius(RadiusMD).
 		Cursor(ui.CursorPointer).
-		Tooltip("Rename tab (Cmd+R)").
+		Tooltip("Rename tab").
 		OnClick(a.beginRename)
 	if btn.Hovered() {
 		btn.Background(InkWash)
