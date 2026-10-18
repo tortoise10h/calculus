@@ -1,0 +1,81 @@
+# Release pipeline: builds Calculus for macOS, Windows and Linux, and
+# uploads the installers to a draft GitHub release.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# then watch the run at https://github.com/tortoise10h/calculus/actions and
+# review and publish the draft release at
+# https://github.com/tortoise10h/calculus/releases
+#
+# MyGo needs no cgo, so Ubuntu runners build the Windows and Linux
+# installers; the macOS job needs a macOS runner, because disk images
+# are made there. The macOS app is signed ad hoc, so Gatekeeper asks
+# users to right-click → Open on first launch; see docs/github-actions.md
+# of the mygo repository for the signing + notarization setup.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # the draft release, and the uploads to it
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag matches mygo.json
+        run: test "$GITHUB_REF_NAME" = "v$(jq -r .version mygo.json)"
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+
+  build:
+    needs: draft-release
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # one platform failing must not kill the others
+      matrix:
+        include:
+          - { name: macOS, os: macos-latest, platform: "darwin/arm64,darwin/amd64" }
+          - { name: Windows, os: ubuntu-latest, platform: "windows/amd64,windows/arm64" }
+          - { name: Linux, os: ubuntu-latest, platform: "linux/amd64,linux/arm64" }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install NSIS, for the Windows installers
+        if: matrix.name == 'Windows'
+        run: sudo apt-get update && sudo apt-get install -y nsis
+      - name: Build
+        run: go tool mygo build -platform "${{ matrix.platform }}"
+      - name: Upload to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob # a pattern that matches nothing is no file, not a literal
+          # Each job builds only its own targets, so the other patterns match
+          # nothing here; gh errors on those, hence the nullglob above.
+          files=(
+            build/darwin-*/*.dmg
+            build/windows-*/*Setup*.exe
+            build/linux-*/*.deb
+            build/linux-*/*.tar.gz
+          )
+          scripts=(build/linux-*/install.sh)
+          if [ ${#scripts[@]} -gt 0 ]; then
+            files+=("${scripts[0]}") # the same install script for every Linux target
+          fi
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::no installers under build/ to upload"; exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
