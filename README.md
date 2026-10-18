@@ -28,7 +28,14 @@ Go to [Releases](https://github.com/tortoise10h/calculus/releases) and download 
 | Windows | `Calculus-Setup.exe` | Run the installer. You can also run the portable `Calculus.exe` with no install. |
 | Linux | `.deb` or `.tar.gz` | Run `sudo dpkg -i calculus_<version>_amd64.deb`, or extract the `.tar.gz`. |
 
-**Note for macOS**: The app has no Apple Developer ID signature yet. So Gatekeeper can block the app after download. To run it, right-click the app and choose **Open**. You can also build the app on your machine (Option 2). A local build has no quarantine flag, so Gatekeeper does not block it.
+> [!WARNING]
+> **Calculus is not code-signed** — we have no Apple or Windows developer account, so macOS and Windows can block the app when you install it. To bypass it:
+>
+> - **macOS**: Right-click the app and choose **Open** (on macOS 15+, use **System Settings → Privacy & Security → Open Anyway** instead), or clear the quarantine flag: `xattr -dr com.apple.quarantine /Applications/Calculus.app`.
+> - **Windows**: On the "Windows protected your PC" screen, click **More info** → **Run anyway**.
+> - **Linux**: Nothing blocks unsigned packages, so install as usual.
+>
+> A local build (Option 2) has no such block.
 
 ### Option 2: Build and install locally
 
