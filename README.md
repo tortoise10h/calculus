@@ -13,7 +13,8 @@ Calculus is a lightweight desktop calculator inspired by [Numi](https://numi.app
 
 ## 2. Demo
 
-https://github.com/user-attachments/assets/24d914e6-c4ff-45f6-93bb-f43fda1628f9
+https://github.com/user-attachments/assets/a8cc216e-2d70-4bb6-9574-a87572f52ac7
+
 
 ## 3. Installation
 
