@@ -45,6 +45,22 @@ type App struct {
 	renaming bool
 	draft    string
 
+	// Tab-triggered variable autocomplete (internal/app/suggest.go).
+	caret     int      // Tracked caret, a rune offset into the active tab's text.
+	selLen    int      // Rune length of the selection as of the last build.
+	completed string   // Name queued to replace the identifier at the next build.
+	suggOpen  bool     // Whether the suggestion popup is showing.
+	suggItems []string // Matches for the typed prefix, in definition order.
+	suggIndex int      // Highlighted item in suggItems.
+	charWidth float32  // Cached editor character advance, for popup placement.
+
+	// pendingCaret* places the caret after a completed word. The splice lands
+	// in the editor a build after the text is queued, so SetTextSelection must
+	// be re-asserted until the editor's own text catches up and it sticks.
+	pendingCaret    int
+	pendingCaretSet bool
+	pendingCaretTab string // Tab the pending caret belongs to.
+
 	// stripFirst is the index of the leftmost tab dot drawn in the bottom
 	// strip. Past maxDots tabs the strip becomes a sliding window over the
 	// list, and this is what it is currently scrolled to.
@@ -103,8 +119,10 @@ func (a *App) SetContent(text string) {
 }
 
 // evaluate recomputes all line results for the active tab. It runs on text and
-// tab changes only, never per frame.
+// tab changes only, never per frame. Any open suggestion list belongs to the
+// document as it was, so it is dismissed along with the stale results.
 func (a *App) evaluate() {
+	a.closeSuggestions()
 	tab := a.ActiveTab()
 	if tab == nil {
 		a.results, a.ranges = nil, nil

@@ -47,6 +47,21 @@ func (a *App) editor(c *ui.Context) {
 		TrackLines(&a.lines).
 		TrackScroll(&a.scroll).
 		TextRanges(a.ranges...).
+		HandleInput(func(ev ui.InputEvent) bool {
+			// Never takes the event; it only watches it to keep the caret
+			// tracker (suggest.go) in step between frames.
+			if a.trackCaret(ev) {
+				c.Invalidate()
+			}
+			return false
+		}).
+		OnTextKey(func(k ui.TextKey) bool {
+			taken := a.textKey(k)
+			if taken {
+				c.Invalidate() // State changed between frames: draw the result.
+			}
+			return taken
+		}).
 		OnChange(func() {
 			a.evaluate()
 			a.markDirty()
@@ -57,6 +72,14 @@ func (a *App) editor(c *ui.Context) {
 	if !a.renaming {
 		ta.AutoFocus()
 	}
+
+	// The build pass is the only moment Element handles are valid: read the
+	// caret here, apply any queued completion (suggest.go), then draw the
+	// suggestion popup against the fresh caret.
+	a.syncCaret(ta)
+	a.applyCompletion(ta)
+	a.placeCaret(ta)
+	a.suggestPopup(c)
 }
 
 // bindScroll keeps the single editor's scroll state and the active tab's
