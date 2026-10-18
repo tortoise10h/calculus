@@ -55,6 +55,7 @@ The build writes the package for your OS to `build/`:
 | Free-style input | Type math across many lines, like notes. Every line gets its own result. |
 | Live results | Results appear as you type. Each result is aligned to the right of its line. |
 | Variables | Store a value in a name (`cost = 10 + 5`). Use the name on later lines. |
+| Variables suggestion popup | When you define many variables and want to use it, just type first letter of it and press `Tab` key, the suggestion list will appear and you can navigate up and down (arrow key) to quickly choose it |
 | Arithmetic | `+`, `-`, `*`, `/`, `%` (remainder), parentheses, and negative numbers. |
 | Number shorthand | `100k` = 100,000. `10m` and `10tr` = 10,000,000. `1b` and `1t` = 1,000,000,000. |
 | Comments and notes | `# ...` and `// ...` are comments. Plain text lines are ignored. |
