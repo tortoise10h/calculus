@@ -61,7 +61,7 @@ var (
 	Green      = ui.Hex("#188554")
 )
 
-// Syntax highlighting palette (see docs/style-guide.md, Phase 2/3 section).
+// Syntax highlighting palette (see the Syntax highlighting section of docs/style-guide.md).
 var (
 	SyntaxNumber   = ui.Hex("#1d2433")
 	SyntaxOperator = Muted
